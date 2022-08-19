@@ -6,21 +6,24 @@ using CMS.Membership;
 using CMS.SiteProvider;
 using CMS.UIControls;
 using CMS.WorkflowEngine;
-using KX12To13Converter.Base.PageOperations;
 using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Linq;
 using System.Web.UI.WebControls;
 using TreeNode = CMS.DocumentEngine.TreeNode;
+using CMS.Core;
+using KX12To13Converter.Interfaces;
 
 namespace KX12To13Converter.Pages.CMSModules.KX12To13Converter.UpgradeScripts
 {
     public partial class VersioningWorkflow : CMSPage
     {
+        public IPreUpgrade1VersioningWorkflow PreUpgrade1VersioningWorkflow { get; }
+
         public VersioningWorkflow()
         {
-           
+            PreUpgrade1VersioningWorkflow = Service.Resolve<IPreUpgrade1VersioningWorkflow>();
         }
 
         protected override void OnInit(EventArgs e)
@@ -57,7 +60,6 @@ namespace KX12To13Converter.Pages.CMSModules.KX12To13Converter.UpgradeScripts
             string path = !string.IsNullOrWhiteSpace(txtPath.Value?.ToString() ?? "") ? txtPath.Text : "/%";
             path = path.EndsWith("%") ? path : path + "%";
             int siteID = ValidationHelper.GetInteger(ddlSite.SelectedValue, -1);
-            var upgrader = new PreUpgrade1VersioningWorkflow();
 
             var archivedInEditModeOptType = PreUpgrade1VersioningWorkflow.GetOperationType(ddlPreviousArchivedEdit.SelectedValue);
             var editModeNeverPublishedOptType = PreUpgrade1VersioningWorkflow.GetOperationType(ddlNeverPublished.SelectedValue);
@@ -66,8 +68,7 @@ namespace KX12To13Converter.Pages.CMSModules.KX12To13Converter.UpgradeScripts
             var editModePreviouslyPublishedOptType = PreUpgrade1VersioningWorkflow.GetOperationType(ddlPreviouslyPublished.SelectedValue);
             var nonPublishedArchivedNoHistoryOptType = PreUpgrade1VersioningWorkflow.GetOperationType(ddlNoVersionHistory.SelectedValue);
 
-
-            upgrader.PublishCheckInArchive(path, siteID, 
+            PreUpgrade1VersioningWorkflow.PublishCheckInArchive(path, siteID, 
                 archivedInEditModeOptType, 
                 editModeNeverPublishedOptType,
                 editModeNeverPublishedPublishFromOptType,
@@ -81,8 +82,6 @@ namespace KX12To13Converter.Pages.CMSModules.KX12To13Converter.UpgradeScripts
                 lstPreviouslyPublished,
                 lstNoVersionHistory,
                 reportOnly);
-
-            
         }
 
         protected void btnPublishAllReport_Click(object sender, EventArgs e)

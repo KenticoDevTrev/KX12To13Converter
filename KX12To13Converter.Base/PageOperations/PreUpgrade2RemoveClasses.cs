@@ -1,18 +1,17 @@
 ﻿using CMS.DataEngine;
 using CMS.DocumentEngine;
 using CMS.Helpers;
+using KX12To13Converter.Interfaces;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace KX12To13Converter.Base.PageOperations
 {
-    public class PreUpgrade2RemoveClasses
+    public class PreUpgrade2RemoveClasses : IPreUpgrade2RemoveClasses
     {
 
-        public static IEnumerable<DataClassInfo> GetPageTypes()
+        public IEnumerable<DataClassInfo> GetPageTypes()
         {
             return DataClassInfoProvider.GetClasses()
                 .WhereTrue("ClassIsDocumentType")
@@ -20,7 +19,7 @@ namespace KX12To13Converter.Base.PageOperations
                 .TypedResult;
         }
 
-        public static IEnumerable<DataClassInfo> GetUsedPageTypes()
+        public IEnumerable<DataClassInfo> GetUsedPageTypes()
         {
             return DataClassInfoProvider.GetClasses()
                 .WhereTrue("ClassIsDocumentType")
@@ -29,7 +28,7 @@ namespace KX12To13Converter.Base.PageOperations
                 .TypedResult;
         }
 
-        public static string GetEntryValue(DataClassInfo dataClassInfo)
+        public string GetEntryValue(DataClassInfo dataClassInfo)
         {
             var tableFieldOnlyQueryLookups = new List<Tuple<string, string, bool>>
         {
@@ -118,19 +117,19 @@ namespace KX12To13Converter.Base.PageOperations
             }, new CacheSettings(60, "refLookupForClasses", dataClassInfo.ClassName));
         }
 
-        public static string GetEntryValueForUsed(DataClassInfo classObj)
+        public string GetEntryValueForUsed(DataClassInfo classObj)
         {
             int totalDocs = Convert.ToInt32(ConnectionHelper.ExecuteQuery($"select count(*) as totalCount from VIew_CMS_Tree_Joined where NodeClassID = {classObj.ClassID}", null, QueryTypeEnum.SQLQuery).Tables[0].Rows[0]["totalCount"]);
             return $"[{classObj.ClassName}] {classObj.ClassDisplayName} [{totalDocs} Documents]";
 
         }
 
-        public static int References(string lookup, string table, string column)
+        public int References(string lookup, string table, string column)
         {
             return ValidationHelper.GetInteger(ConnectionHelper.ExecuteQuery($"Select Count(*) from {table} where {column} like '%{SqlHelper.EscapeQuotes(lookup)}%'", null, QueryTypeEnum.SQLQuery).Tables[0].Rows[0][0], 0);
         }
 
-        public static void DeleteClasses(IEnumerable<int> classIds)
+        public void DeleteClasses(IEnumerable<int> classIds)
         {
             foreach (var classObj in DataClassInfoProvider.GetClasses().WhereIn("ClassID", classIds.ToArray()).TypedResult)
             {
@@ -138,7 +137,7 @@ namespace KX12To13Converter.Base.PageOperations
             }
         }
 
-        public static void DeletePagesClasses(IEnumerable<int> classIds)
+        public void DeletePagesClasses(IEnumerable<int> classIds)
         {
             foreach (var classObj in DataClassInfoProvider.GetClasses().WhereIn("ClassID", classIds.ToArray()).TypedResult)
             {

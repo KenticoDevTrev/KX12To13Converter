@@ -1,5 +1,6 @@
-﻿using CMS.UIControls;
-using KX12To13Converter.Base.PageOperations;
+﻿using CMS.Core;
+using CMS.UIControls;
+using KX12To13Converter.Interfaces;
 using Newtonsoft.Json;
 using System;
 
@@ -7,6 +8,14 @@ namespace KX12To13Converter.Pages.CMSModules.KX12To13Converter.WidgetToPageBuild
 {
     public partial class SectionConfigurationBuilder : CMSPage
     {
+
+        public SectionConfigurationBuilder()
+        {
+            SectionConfigurationBuilderMethods = Service.Resolve<ISectionConfigurationBuilderMethods>();
+        }
+
+        public ISectionConfigurationBuilderMethods SectionConfigurationBuilderMethods { get; }
+
         protected void btnGenerate_Click(object sender, EventArgs e)
         {
             var includedIds = SectionConfigurationBuilderMethods.GetSectionWidgetIdsByWidgetName(tbxIncluded.Text.Split("\n\r;,|".ToCharArray(), StringSplitOptions.RemoveEmptyEntries));

@@ -1,6 +1,7 @@
 ﻿using CMS.Base;
+using CMS.Core;
 using CMS.UIControls;
-using KX12To13Converter.Base.PageOperations;
+using KX12To13Converter.Interfaces;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -9,6 +10,12 @@ namespace KX12To13Converter.Pages.CMSModules.KX12To13Converter.UpgradeScripts
 {
     public partial class ConvertForms : CMSPage
     {
+        public IPreUpgrade4ConvertForms PreUpgrade4ConvertForms { get; }
+
+        public ConvertForms()
+        {
+            PreUpgrade4ConvertForms = Service.Resolve<IPreUpgrade4ConvertForms>();
+        }
 
         protected override void OnInit(EventArgs e)
         {

@@ -2,7 +2,9 @@
 using CMS.FormEngine;
 using CMS.Helpers;
 using CMS.PortalEngine;
-using KX12To13Converter.Base.Classes.PortalEngineToPageBuilder;
+using KX12To13Converter.Interfaces;
+using KX12To13Converter.PortalEngineToPageBuilder;
+using KX12To13Converter.PortalEngineToPageBuilder.SupportingConverterClasses;
 using System;
 using System.Collections.Generic;
 using System.Data;
@@ -11,10 +13,10 @@ using System.Xml;
 
 namespace KX12To13Converter.Base.PageOperations
 {
-    public class WidgetConfigurationBuilderMethods
+    public class WidgetConfigurationBuilderMethods : IWidgetConfigurationBuilderMethods
     {
 
-        public static IEnumerable<int> GetWidgetIdsByWidgetName(IEnumerable<string> widgetNames)
+        public IEnumerable<int> GetWidgetIdsByWidgetName(IEnumerable<string> widgetNames)
         {
             return WidgetInfoProvider.GetWidgets()
                 .Source(x => x.Join<WebPartInfo>(nameof(WidgetInfo.WidgetWebPartID), nameof(WebPartInfo.WebPartID)))
@@ -24,15 +26,7 @@ namespace KX12To13Converter.Base.PageOperations
                 .TypedResult.Select(x => x.WidgetID);
         }
 
-        public static IEnumerable<int> GetCurrentWidgets()
-        {
-            return ConnectionHelper.ExecuteQuery(@"select WidgetID from CMS_Widget
-left join CMS_WebPart on WebpartID = WidgetWebPartID
-where WebPartType = 6 and exists (select 0 from View_CMS_Tree_Joined where DocumentWebParts like '%type=""'+WidgetName+'""%' and 
-DocumentIsArchived = 0 and DocumentCanBePublished = 1 and COALESCE(DocumentPublishFrom, @minDate) < GETDATE() and COALESCE(DocumentPublishTo, @maxDate) > GETDATE())", new QueryDataParameters() { { "@minDate", DateTimeHelper.ZERO_TIME }, { "@maxDate", DateTime.MaxValue } }, QueryTypeEnum.SQLQuery).Tables[0].Rows.Cast<DataRow>().Select(x => (int)x["WidgetID"]);
-        }
-
-        private static Dictionary<bool, IEnumerable<int>> GetIsInlineWidgetToWidgetIds()
+        private Dictionary<bool, IEnumerable<int>> GetIsInlineWidgetToWidgetIds()
         {
             return ConnectionHelper.ExecuteQuery(@" select WidgetID, 0 as Inline from CMS_Widget
 left join CMS_WebPart on WebpartID = WidgetWebPartID
@@ -47,9 +41,9 @@ select 1 from View_CMS_Tree_Joined where CONCAT(COALESCE(DocumentContent, ''), C
 .GroupBy(x => x.Item1).ToDictionary(key => key.Key, value => value.Select(x => x.Item2));
         }
 
-        public static List<ConverterWidgetConfiguration> GetWidgetConfigurations(IEnumerable<int> includedWidgetIds, IEnumerable<int> excludedWidgetIds)
+        public List<ConverterWidgetConfiguration> GetWidgetConfigurations(IEnumerable<int> includedWidgetIds, IEnumerable<int> excludedWidgetIds)
         {
-            var inlineToWidgetIds = WidgetConfigurationBuilderMethods.GetIsInlineWidgetToWidgetIds();
+            var inlineToWidgetIds = GetIsInlineWidgetToWidgetIds();
             var widgetIds = inlineToWidgetIds.Values.SelectMany(x => x);
 
 

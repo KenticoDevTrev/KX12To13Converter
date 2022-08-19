@@ -1,19 +1,18 @@
 ﻿using CMS.DataEngine;
 using CMS.Helpers;
 using CMS.PortalEngine;
-using KX12To13Converter.Base.Classes.PortalEngineToPageBuilder;
+using KX12To13Converter.Interfaces;
+using KX12To13Converter.PortalEngineToPageBuilder;
 using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace KX12To13Converter.Base.PageOperations
 {
-    public class TemplateConfigurationBuilderMethods
+    public class TemplateConfigurationBuilderMethods : ITemplateConfigurationBuilderMethods
     {
-        public static IEnumerable<int> GetTemplateIdsByCodeName(IEnumerable<string> templateCodeNames)
+        public IEnumerable<int> GetTemplateIdsByCodeName(IEnumerable<string> templateCodeNames)
         {
             return PageTemplateInfoProvider.GetTemplates()
                 .WhereIn("PageTemplateCodeName", templateCodeNames.ToArray())
@@ -21,7 +20,7 @@ namespace KX12To13Converter.Base.PageOperations
                 .TypedResult.Select(x => x.PageTemplateId);
         }
 
-        public static IEnumerable<int> GetCurrentTemplateIds()
+        public IEnumerable<int> GetCurrentTemplateIds()
         {
             return ConnectionHelper.ExecuteQuery(@"select distinct TemplateID from (
 select COALESCE(DocumentPageTemplateID, NodeTemplateID) as TemplateID from View_CMS_Tree_Joined where
@@ -29,7 +28,7 @@ DocumentIsArchived = 0 and DocumentCanBePublished = 1 and COALESCE(DocumentPubli
 ) templates where TemplateID is not null", new QueryDataParameters() { { "@minDate", DateTimeHelper.ZERO_TIME }, { "@maxDate", DateTime.MaxValue } }, QueryTypeEnum.SQLQuery).Tables[0].Rows.Cast<DataRow>().Select(x => (int)x["TemplateID"]);
         }
 
-        public static List<TemplateConfiguration> GetTemplateConfigurations(IEnumerable<int> currentTemplateIds, IEnumerable<int> includedTemplateIds, IEnumerable<int> excludedTemplateIds)
+        public List<TemplateConfiguration> GetTemplateConfigurations(IEnumerable<int> currentTemplateIds, IEnumerable<int> includedTemplateIds, IEnumerable<int> excludedTemplateIds)
         {
             List<TemplateConfiguration> templateConfigurations = new List<TemplateConfiguration>();
 

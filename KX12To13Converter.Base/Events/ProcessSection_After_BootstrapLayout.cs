@@ -1,20 +1,17 @@
-﻿using KX12To13Converter.Base.Classes.PortalEngineToPageBuilder;
-using KX12To13Converter.Base.Classes.PortalEngineToPageBuilder.SupportingConverterClasses;
+﻿using KX12To13Converter.PortalEngineToPageBuilder.EventArgs;
+using KX12To13Converter.PortalEngineToPageBuilder.SupportingConverterClasses;
 using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Text.RegularExpressions;
-using System.Threading.Tasks;
 
-namespace KX12To13Converter.Base.Events
+namespace KX12To13Converter.Events
 {
     /// <summary>
     /// Bootstrap layout parsing event
     /// </summary>
     public class ProcessSection_After_BootstrapLayout
     {
-        public void ProcessSectionAfter_Bootstrap(PortalToMVCProcessWidgetSectionEventArgs sectionEventArgs)
+        public static void ProcessSectionAfter_Bootstrap(object sender, PortalToMVCProcessWidgetSectionEventArgs sectionEventArgs)
         {
             var pbSection = sectionEventArgs.PageBuilderSection;
             var peSection = sectionEventArgs.PortalEngineWidgetSection;

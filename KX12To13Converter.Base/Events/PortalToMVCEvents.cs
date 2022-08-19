@@ -1,6 +1,6 @@
 ﻿using KX12To13Converter.Base.Events;
 
-namespace KX12To13Converter
+namespace KX12To13Converter.Events
 {
     public static class PortalToMVCEvents
     {
@@ -14,7 +14,7 @@ namespace KX12To13Converter
 
         public static ProcessSectionZoneEventHandler ProcessSectionZone;
 
-        public static ProcessWidgetEventHandler ProcessWidgetZone;
+        public static ProcessWidgetEventHandler ProcessWidget;
         static PortalToMVCEvents()
         {
             ProcessPage = new ProcessPageEventHandler()
@@ -42,9 +42,9 @@ namespace KX12To13Converter
                 Name = "PortalToMVCEvents.ProcessSectionZone"
             };
 
-            ProcessWidgetZone = new ProcessWidgetEventHandler()
+            ProcessWidget = new ProcessWidgetEventHandler()
             {
-                Name = "PortalToMVCEvents.ProcessWidgetZone"
+                Name = "PortalToMVCEvents.ProcessWidget"
             };
         }
 

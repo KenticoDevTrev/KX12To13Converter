@@ -4,34 +4,31 @@ using CMS.FormEngine;
 using CMS.Helpers;
 using CMS.MacroEngine;
 using CMS.PortalEngine;
-using KX12To13Converter.Base.Classes.PortalEngineToPageBuilder;
-using KX12To13Converter.Base.Classes.PortalEngineToPageBuilder.SupportingConverterClasses;
-using KX12To13Converter.Base.Events;
+using KX12To13Converter.Events;
+using KX12To13Converter.Interfaces;
+using KX12To13Converter.PortalEngineToPageBuilder;
+using KX12To13Converter.PortalEngineToPageBuilder.EventArgs;
+using KX12To13Converter.PortalEngineToPageBuilder.SupportingConverterClasses;
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.Linq;
-using System.Text.RegularExpressions;
 using System.Web;
 using System.Xml;
 
 namespace KX12To13Converter.Base.Classes.PortalEngineToPageBuilder
 {
-    public class PortalEngineToMVCConverter
+    public class PortalEngineToMVCConverter : IPortalEngineToMVCConverter
     {
         public PortalEngineToMVCConverter(List<TemplateConfiguration> templateConfigurations,
             List<ConverterSectionConfiguration> sectionConfigurations,
             PageBuilderSection defaultSectionConfiguration,
-            List<ConverterWidgetConfiguration> widgetConfigurations,
-            ProcessDocumentSettings settings)
+            List<ConverterWidgetConfiguration> widgetConfigurations)
         {
             TemplateConfigurations = templateConfigurations;
             SectionConfigurations = sectionConfigurations;
             DefaultSectionConfiguration = defaultSectionConfiguration;
             WidgetConfigurations = widgetConfigurations;
-            Settings = settings;
-
             WidgetTypeToConfiguration = WidgetConfigurations.ToDictionary(key => key.PE_Widget.PE_WidgetCodeName.ToLowerInvariant(), value => value);
 
             if (widgetConfigurations.Any(wc => wc.PE_Widget.KeyValues.Count(kv => kv.CanContainInlineWidgets) > 1))
@@ -52,11 +49,56 @@ namespace KX12To13Converter.Base.Classes.PortalEngineToPageBuilder
             // Build widget dictionaries of Layout, Inline, and Editors
             var allWidgets = WidgetInfoProvider.GetWidgets().TypedResult;
 
-            InlineWidgetDictionary = allWidgets.Where(x => x.WidgetForInline).ToDictionary(key => key.WidgetName.ToLowerInvariant(), value => value);
-            EditorWidgetDictionary = allWidgets.Where(x => x.WidgetForEditor).ToDictionary(key => key.WidgetName.ToLowerInvariant(), value => value);
+            var allWidgetNames = allWidgets.Select(x => x.WidgetName.ToLower());
+           
+            AllWidgetToVisibleProperties = allWidgets.ToDictionary(key => key.WidgetName.ToLowerInvariant(), value => GetVisibleProperties(value));
 
             LayoutWidgetDictionary = allWidgets.Where(x => WebpartDictionary[x.WidgetWebPartID].WebPartType == (int)WebPartTypeEnum.Layout).ToDictionary(key => key.WidgetName.ToLowerInvariant(), value => value);
-            AllWidgetToVisibleProperties = allWidgets.ToDictionary(key => key.WidgetName.ToLowerInvariant(), value => GetVisibleProperties(value));
+
+            // Add Editable Text and Editable Image webparts don't have a widget variation
+            if (!allWidgetNames.Contains("editabletext"))
+            {
+                AllWidgetToVisibleProperties.Add("editabletext", new List<FormFieldInfo>()
+                {
+                    new FormFieldInfo()
+                    {
+                        Name = "text",
+                        DefaultValue = ""
+                    }
+                });
+            }
+            if (!allWidgetNames.Contains("editableimage"))
+            {
+                AllWidgetToVisibleProperties.Add("editableimage", new List<FormFieldInfo>()
+                {
+                    new FormFieldInfo()
+                    {
+                        Name = "EditableImageUrl",
+                        DefaultValue = ""
+                    },
+                    new FormFieldInfo()
+                    {
+                        Name = "ImageTitle",
+                        DefaultValue = ""
+                    },
+                    new FormFieldInfo()
+                    {
+                        Name = "AlternateText",
+                        DefaultValue = ""
+                    },
+                    new FormFieldInfo()
+                    {
+                        Name = "ImageWidth",
+                        DefaultValue = ""
+                    },
+                    new FormFieldInfo()
+                    {
+                        Name = "ImageHeight",
+                        DefaultValue = ""
+                    },
+                });
+            }
+
         }
 
         public List<FormFieldInfo> GetVisibleProperties(WidgetInfo widget)
@@ -70,14 +112,11 @@ namespace KX12To13Converter.Base.Classes.PortalEngineToPageBuilder
         public List<ConverterSectionConfiguration> SectionConfigurations { get; }
         public PageBuilderSection DefaultSectionConfiguration { get; }
         public List<ConverterWidgetConfiguration> WidgetConfigurations { get; }
-        public ProcessDocumentSettings Settings { get; }
         public Dictionary<string, ConverterWidgetConfiguration> WidgetTypeToConfiguration { get; }
         public Dictionary<int, PageTemplateInfo> TemplateDictionary { get; private set; }
-        public Dictionary<string, WidgetInfo> LayoutWidgetDictionary { get; private set; }
         public Dictionary<string, List<FormFieldInfo>> AllWidgetToVisibleProperties { get; private set; }
+        public Dictionary<string, WidgetInfo> LayoutWidgetDictionary { get; private set; }
         public Dictionary<int, WebPartInfo> WebpartDictionary { get; private set; }
-        public Dictionary<string, WidgetInfo> InlineWidgetDictionary { get; private set; }
-        public Dictionary<string, WidgetInfo> EditorWidgetDictionary { get; private set; }
 
         public void ProcessesDocuments(IEnumerable<TreeNode> documents, Func<TreeNode, PortalToMVCProcessDocumentPrimaryEventArgs, bool> handler)
         {
@@ -131,12 +170,9 @@ namespace KX12To13Converter.Base.Classes.PortalEngineToPageBuilder
         {
             var portalToMVCEventArgs = context.portalToMVCEventArgs;
             var templateConfiguration = new PageTemplateConfiguration();
-            var templateEventArgs = new PortalToMVCProcessTemplateEventArgs()
+            var templateEventArgs = new PortalToMVCProcessTemplateEventArgs(portalToMVCEventArgs, portalToMVCEventArgs.PortalEngineData.Template, TemplateConfigurations.AsReadOnly())
             {
-                PrimaryEventArgs = portalToMVCEventArgs,
-                PortalEngineTemplate = portalToMVCEventArgs.PortalEngineData.Template,
-                PageBuilderTemplate = templateConfiguration,
-                TemplateConfigurations = TemplateConfigurations.AsReadOnly()
+                PageBuilderTemplate = templateConfiguration
             };
 
             //ProcessTemplate.Before
@@ -220,11 +256,8 @@ namespace KX12To13Converter.Base.Classes.PortalEngineToPageBuilder
             var portalToMVCEventArgs = context.portalToMVCEventArgs;
             var existingPBEditableAreas = context.existingPBEditableAreas;
 
-            PortalToMVCProcessEditableAreaEventArgs editableAreaArgs = new PortalToMVCProcessEditableAreaEventArgs()
+            PortalToMVCProcessEditableAreaEventArgs editableAreaArgs = new PortalToMVCProcessEditableAreaEventArgs(portalToMVCEventArgs, peZoneEditableArea, templateConfig)
             {
-                PrimaryEventArgs = portalToMVCEventArgs,
-                PortalEditableArea = peZoneEditableArea,
-                TemplateConfiguration = templateConfig,
                 EditableAreaConfiguration = new EditableAreaConfiguration()
             };
 
@@ -297,13 +330,9 @@ namespace KX12To13Converter.Base.Classes.PortalEngineToPageBuilder
             var portalToMVCEventArgs = context.portalToMVCEventArgs;
             var pbSection = new SectionConfiguration();
 
-            var sectionEventArgs = new PortalToMVCProcessWidgetSectionEventArgs()
+            var sectionEventArgs = new PortalToMVCProcessWidgetSectionEventArgs(portalToMVCEventArgs, peSection, SectionConfigurations.AsReadOnly(), DefaultSectionConfiguration)
             {
-                PrimaryEventArgs = portalToMVCEventArgs,
-                PortalEngineWidgetSection = peSection,
                 PageBuilderSection = pbSection,
-                SectionConfigurations = SectionConfigurations.AsReadOnly(),
-                DefaultSectionConfiguration = DefaultSectionConfiguration
             };
 
             using (var sectionEventHandler = PortalToMVCEvents.ProcessSection.StartEvent(sectionEventArgs))
@@ -430,12 +459,8 @@ namespace KX12To13Converter.Base.Classes.PortalEngineToPageBuilder
             {
                 Identifier = Guid.NewGuid()
             };
-            PortalToMVCProcessWidgetSectionZoneEventArgs sectionZoneEventArgs = new PortalToMVCProcessWidgetSectionZoneEventArgs()
+            PortalToMVCProcessWidgetSectionZoneEventArgs sectionZoneEventArgs = new PortalToMVCProcessWidgetSectionZoneEventArgs(portalToMVCEventArgs, peSection, pbSection, zoneIndex)
             {
-                PrimaryEventArgs = portalToMVCEventArgs,
-                PortalSectionWidget = peSection,
-                PageBuilderSection = pbSection,
-                ZoneIndex = zoneIndex,
                 PageBuilderZoneConfig = pbWidgetZone
             };
 
@@ -490,14 +515,12 @@ namespace KX12To13Converter.Base.Classes.PortalEngineToPageBuilder
             var portalToMVCEventArgs = context.portalToMVCEventArgs;
             var pbWidget = new WidgetConfiguration();
 
-            var widgetEventArgs = new PortalToMVCProcessWidgetEventArgs()
+            var widgetEventArgs = new PortalToMVCProcessWidgetEventArgs(portalToMVCEventArgs, peWidget, WidgetConfigurations.AsReadOnly())
             {
-                PrimaryEventArgs = portalToMVCEventArgs,
-                PortalEngineWidget = peWidget,
                 PageBuilderWidget = pbWidget
             };
 
-            using (var widgetEventHandler = PortalToMVCEvents.ProcessWidgetZone.StartEvent(widgetEventArgs))
+            using (var widgetEventHandler = PortalToMVCEvents.ProcessWidget.StartEvent(widgetEventArgs))
             {
                 if (portalToMVCEventArgs.Handled)
                 {
@@ -530,7 +553,21 @@ namespace KX12To13Converter.Base.Classes.PortalEngineToPageBuilder
         {
             var widgetConfiguation = WidgetConfigurations.Where(x => (x.PE_Widget?.PE_WidgetCodeName ?? Guid.NewGuid().ToString()).Equals(peWidget.Widget.WebPartType, StringComparison.OrdinalIgnoreCase)).FirstOrDefault();
             pbWidget.Identifier = Guid.NewGuid();
-            var widgetFields = AllWidgetToVisibleProperties[peWidget.Widget.WebPartType.ToLowerInvariant()];
+
+            // Can't process if no properties found
+            List<FormFieldInfo> widgetFields = new List<FormFieldInfo>();
+            if (!AllWidgetToVisibleProperties.ContainsKey(peWidget.Widget.WebPartType.ToLowerInvariant()))
+            {
+                portalToMVCEventArgs.ConversionNotes.Add(new ConversionNote()
+                {
+                    IsError = true,
+                    Source = "ProcessWidget",
+                    Type = "WidgetNotFound",
+                    Description = $"Could not find a widget with webpart type name {peWidget.Widget.WebPartType}"
+                });
+            } else { 
+                widgetFields = AllWidgetToVisibleProperties[peWidget.Widget.WebPartType.ToLowerInvariant()];
+            }
 
             var reservedKeys = new string[] { "contentbefore", "contentafter", "htmlbefore", "htmlafter", "container", "containername", "containertitle", "containercssclass", "containercustomcontent" };
 
@@ -701,10 +738,30 @@ namespace KX12To13Converter.Base.Classes.PortalEngineToPageBuilder
         private PortalToMVCProcessDocumentPrimaryEventArgs BuildPortalToMVCProcessDocumentPrimaryEventArgs(TreeNode document)
         {
             int templateId = document.DocumentPageTemplateID > 0 ? document.DocumentPageTemplateID : document.NodeTemplateID;
-            var eventArgs = new PortalToMVCProcessDocumentPrimaryEventArgs()
+            var template = GetGeneralTemplateConfiguration(templateId);
+            // Can't proceed if no template found
+            if (template == null)
             {
-                Page = document,
-                PortalEngineData = GetGeneralTemplateConfiguration(templateId)
+                return new PortalToMVCProcessDocumentPrimaryEventArgs()
+                {
+                    CancelOperation = true,
+                    Page = document,
+                    ConversionNotes = new List<ConversionNote>()
+                    {
+                        new ConversionNote()
+                        {
+                            Source = "BuildPortalToMVCProcessDocumentPrimaryEventArgs",
+                            IsError = true,
+                            Description = $"No Page template found for document {document.NodeAliasPath} [{document.DocumentCulture}] - {document.NodeSiteName}]",
+                            Type = "NoTemplateFound"
+                        }
+                    }
+                };
+            }
+
+            var eventArgs = new PortalToMVCProcessDocumentPrimaryEventArgs(template)
+            {
+                Page = document
             };
 
             // Now build the portal engine data using the document
@@ -769,6 +826,13 @@ namespace KX12To13Converter.Base.Classes.PortalEngineToPageBuilder
                 if (sectionWebpart == null)
                 {
                     // orphan
+                    eventArgs.ConversionNotes.Add(new ConversionNote()
+                    {
+                        IsError = false,
+                        Source = "BuildPortalToMVCProcessDocumentPrimaryEventArgs",
+                        Type = "OrphanedSectionWebpart",
+                        Description = $"Could not find parent for zone {zone.ZoneID} (lookup {parentControlIDlookup}) among all the layout webparts ({allLayoutWebparts.Select(x => x.ControlID).Join(", ")})."
+                    });
                     continue;
                 }
 
@@ -808,7 +872,14 @@ namespace KX12To13Converter.Base.Classes.PortalEngineToPageBuilder
                     var parentControl = allLayoutWebparts.Where(x => x.ControlID.Equals(parentControlIdLookup, StringComparison.OrdinalIgnoreCase)).FirstOrDefault();
                     if (parentControl == null)
                     {
-                        // Orphan
+                        // orphan
+                        eventArgs.ConversionNotes.Add(new ConversionNote()
+                        {
+                            IsError = false,
+                            Source = "BuildPortalToMVCProcessDocumentPrimaryEventArgs",
+                            Type = "OrphanedSectionWebpart",
+                            Description = $"Could not find parent for zone {widgetGeneratedZone.ZoneID} (lookup {parentControlIdLookup}) among all the layout webparts ({allLayoutWebparts.Select(x => x.ControlID).Join(", ")})."
+                        });
                         continue;
                     }
 
@@ -890,26 +961,39 @@ namespace KX12To13Converter.Base.Classes.PortalEngineToPageBuilder
                     SectionZoneToWidgets = new List<List<PortalWidget>>() { new List<PortalWidget>() }
                 };
 
-                foreach (var widget in webpartZone.WebParts)
+                if (webpartZone == null)
                 {
-                    var widgetLookup = widget.ControlID.ToLowerInvariant();
-                    if (!parentControlIDToPortalWidgetSections.ContainsKey(widgetLookup))
+                    eventArgs.ConversionNotes.Add(new ConversionNote()
                     {
-                        groupedWidgetSection.SectionZoneToWidgets[0].AddRange(GetBasicWidgetToPortalWidgets(widget, editableWebParts));
-                    }
-                    else
+                        IsError = true,
+                        Source = "BuildPortalToMVCProcessDocumentPrimaryEventArgs",
+                        Type = "WebpartZoneNotFound",
+                        Description = $"Could not find the webpart zone {lookup} in the page template {(pageTemplateInstance.ParentPageTemplate?.DisplayName ?? "[No template]")}"
+                    });
+                }
+                else
+                {
+                    foreach (var widget in webpartZone.WebParts)
                     {
-                        // is a layout, add any current widgets in the default section, reinitialize, then add the ones in this layout
-                        if (groupedWidgetSection.SectionZoneToWidgets[0].Any())
+                        var widgetLookup = widget.ControlID.ToLowerInvariant();
+                        if (!parentControlIDToPortalWidgetSections.ContainsKey(widgetLookup))
                         {
-                            templateZone.WidgetSections.Add(groupedWidgetSection);
-                            groupedWidgetSection = new PortalWidgetSection()
-                            {
-                                IsDefault = true,
-                                SectionZoneToWidgets = new List<List<PortalWidget>>() { new List<PortalWidget>() }
-                            };
+                            groupedWidgetSection.SectionZoneToWidgets[0].AddRange(GetBasicWidgetToPortalWidgets(widget, editableWebParts));
                         }
-                        templateZone.WidgetSections.AddRange(parentControlIDToPortalWidgetSections[widgetLookup]);
+                        else
+                        {
+                            // is a layout, add any current widgets in the default section, reinitialize, then add the ones in this layout
+                            if (groupedWidgetSection.SectionZoneToWidgets[0].Any())
+                            {
+                                templateZone.WidgetSections.Add(groupedWidgetSection);
+                                groupedWidgetSection = new PortalWidgetSection()
+                                {
+                                    IsDefault = true,
+                                    SectionZoneToWidgets = new List<List<PortalWidget>>() { new List<PortalWidget>() }
+                                };
+                            }
+                            templateZone.WidgetSections.AddRange(parentControlIDToPortalWidgetSections[widgetLookup]);
+                        }
                     }
                 }
 
@@ -1359,7 +1443,7 @@ namespace KX12To13Converter.Base.Classes.PortalEngineToPageBuilder
             return new PortalWidget()
             {
                 AdditionalAncestorZones = new List<WebPartInstance>(),
-                WidgetType = (isStandAlone ? WebpartType.Webpart : WebpartType.EditableImage),
+                WidgetType = WebpartType.EditableImage,
                 Widget = editableImageInstance,
                 EditableImageUrl = imageUrl,
                 EditableImageAlt = imageAltText
@@ -1368,7 +1452,11 @@ namespace KX12To13Converter.Base.Classes.PortalEngineToPageBuilder
 
         private PortalData GetGeneralTemplateConfiguration(int templateId)
         {
-
+            // if template not found, can't proceed
+            if (!TemplateDictionary.ContainsKey(templateId))
+            {
+                return null;
+            }
             var template = TemplateDictionary[templateId];
             var templateInstance = new PageTemplateInstance(template.WebParts);
             var templateZones = new List<PortalWebpartZone>();
@@ -1398,9 +1486,8 @@ namespace KX12To13Converter.Base.Classes.PortalEngineToPageBuilder
                     EditableWebpartInstance = editableImage
                 });
             }
-            return new PortalData()
+            return new PortalData(template)
             {
-                Template = template,
                 TemplateZones = templateZones
             };
 
@@ -1416,7 +1503,6 @@ namespace KX12To13Converter.Base.Classes.PortalEngineToPageBuilder
         internal TreeNode document;
         internal PortalToMVCProcessDocumentPrimaryEventArgs portalToMVCEventArgs;
         internal Dictionary<string, EditableAreaConfiguration> existingPBEditableAreas;
-        internal TemplateConfiguration templateConfig;
 
         public PortalConversionProcessorContext()
         {

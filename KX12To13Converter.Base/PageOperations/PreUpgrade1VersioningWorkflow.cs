@@ -4,17 +4,17 @@ using CMS.DocumentEngine;
 using CMS.Helpers;
 using CMS.Membership;
 using CMS.WorkflowEngine;
+using KX12To13Converter.Enums;
+using KX12To13Converter.Interfaces;
 using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Web.UI.WebControls;
 using TreeNode = CMS.DocumentEngine.TreeNode;
 namespace KX12To13Converter.Base.PageOperations
 {
-    public class PreUpgrade1VersioningWorkflow
+    public class PreUpgrade1VersioningWorkflow : IPreUpgrade1VersioningWorkflow
     {
         private TreeProvider _TreeProvider;
         private VersionManager _Manager;
@@ -143,7 +143,7 @@ and DocumentworkflowstepID in (select distinct StepID from CMS_WorkflowStep wher
             }
         }
 
-        public static VersionHistoryOperationType GetOperationType(string value)
+        public VersionHistoryOperationType GetOperationType(string value)
         {
             switch (value.ToLower())
             {
@@ -157,7 +157,7 @@ and DocumentworkflowstepID in (select distinct StepID from CMS_WorkflowStep wher
             }
         }
 
-        public static void DisableWorkflowAndClearHistory()
+        public void DisableWorkflowAndClearHistory()
         {
             foreach (var workflow in WorkflowInfoProvider.GetWorkflows().WhereEquals(nameof(WorkflowInfo.WorkflowEnabled), false).TypedResult)
             {
@@ -301,20 +301,5 @@ and DocumentworkflowstepID in (select distinct StepID from CMS_WorkflowStep wher
         }
     }
 
-
-
-    public enum PreviousState
-    {
-        WasPublished, WasArchived, Neither
-    }
-    public enum CurrentDocumentType
-    {
-        LatestVersion, WaitingToPublishVersion
-    }
-
-    public enum VersionHistoryOperationType
-    {
-        RollBack, Publish, Archive
-    }
 }
 

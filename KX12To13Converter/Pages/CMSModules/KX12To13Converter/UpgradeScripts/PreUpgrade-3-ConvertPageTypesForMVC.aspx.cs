@@ -1,18 +1,24 @@
 ﻿using CMS.DataEngine;
 using CMS.Helpers;
 using CMS.UIControls;
-using KX12To13Converter.Base.PageOperations;
 using System;
 using System.Data;
 using System.Linq;
 using System.Web.UI;
 using System.Web.UI.WebControls;
+using CMS.Core;
+using KX12To13Converter.Interfaces;
 
 namespace KX12To13Converter.Pages.CMSModules.KX12To13Converter.UpgradeScripts
 {
     public partial class ConvertPageTypesForMVC : CMSPage
     {
+        public IPreUpgrade3ConvertPageTypesForMVC PreUpgrade3ConvertPageTypesForMVC { get; }
 
+        public ConvertPageTypesForMVC()
+        {
+            PreUpgrade3ConvertPageTypesForMVC = Service.Resolve<IPreUpgrade3ConvertPageTypesForMVC>();
+        }
         protected override void OnInit(EventArgs e)
         {
             base.OnInit(e);

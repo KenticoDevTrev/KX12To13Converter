@@ -1,16 +1,14 @@
 ﻿using CMS.DataEngine;
-using System;
+using KX12To13Converter.Interfaces;
 using System.Collections.Generic;
 using System.Data;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace KX12To13Converter.Base.PageOperations
 {
-    public static class PreUpgrade3ConvertPageTypesForMVC
+    public class PreUpgrade3ConvertPageTypesForMVC : IPreUpgrade3ConvertPageTypesForMVC
     {
-        public static IEnumerable<DataClassInfo> GetPageBuidlerPageTypes()
+        public IEnumerable<DataClassInfo> GetPageBuidlerPageTypes()
         {
             return DataClassInfoProvider.GetClasses()
                 .Where("ClassName <> 'CMS.Root' and ClassIsDocumentType = 1 and COALESCE(ClassIsContentOnly, 0) = 0 and ClassIsCoupledClass = 1 and ClassUrlPattern is null")
@@ -18,7 +16,7 @@ namespace KX12To13Converter.Base.PageOperations
                 .TypedResult;
         }
 
-        public static IEnumerable<DataClassInfo> GetPageBuilderContentOnly()
+        public IEnumerable<DataClassInfo> GetPageBuilderContentOnly()
         {
             return DataClassInfoProvider.GetClasses()
                 .Where("ClassName <> 'CMS.Root' and ClassIsDocumentType = 1 and ClassIsContentOnly = 1 and ClassIsCoupledClass = 1 and CLassUrlPattern is null")
@@ -26,7 +24,7 @@ namespace KX12To13Converter.Base.PageOperations
                 .TypedResult;
         }
 
-        public static IEnumerable<DataClassInfo> GetClassWithUrlPages()
+        public IEnumerable<DataClassInfo> GetClassWithUrlPages()
         {
             return ConnectionHelper.ExecuteQuery(@"select distinct OuterC.* from View_CMS_Tree_Joined outerT
 left join CMS_Class outerC on OuterC.CLassID = OuterT.NodeClassID
@@ -37,16 +35,16 @@ left join CMS_CLass C on C.ClassID = innerT.NodeClassID
 where coalesce(C.ClassURLPattern, '') <> '' and C.ClassName <> 'cms.root')", null, QueryTypeEnum.SQLQuery).Tables[0].Rows.Cast<DataRow>().Select(x => new DataClassInfo(x));
         }
 
-        public static int GetTotalWidgetContentPages(DataClassInfo classObj)
+        public int GetTotalWidgetContentPages(DataClassInfo classObj)
         {
             return (int)ConnectionHelper.ExecuteQuery($"select count(*) as itemCount from View_CMS_Tree_Joined where NodeClassID = {classObj.ClassID} and ((len(COALESCE(DocumentContent, '')) > 0 and DocumentContent <> '<content></content>')  or LEN(COALESCE(DocumentWebParts, '')) > 0)", null, QueryTypeEnum.SQLQuery).Tables[0].Rows[0]["itemCount"];
         }
-        public static int GetTotalPages(DataClassInfo classObj)
+        public int GetTotalPages(DataClassInfo classObj)
         {
             return (int)ConnectionHelper.ExecuteQuery($"select count(*) as itemCount from View_CMS_Tree_Joined where NodeClassID = {classObj.ClassID}", null, QueryTypeEnum.SQLQuery).Tables[0].Rows[0]["itemCount"];
         }
 
-        public static void AdjustClass(string adjustToValue, string defaultTemplate, int classID)
+        public void AdjustClass(string adjustToValue, string defaultTemplate, int classID)
         {
             string query = "";
             string subQuery = "";
@@ -76,7 +74,7 @@ where coalesce(C.ClassURLPattern, '') <> '' and C.ClassName <> 'cms.root')", nul
             }
         }
 
-        public static void EnableUrlFeature(string adjustToValue, DataClassInfo classObj)
+        public void EnableUrlFeature(string adjustToValue, DataClassInfo classObj)
         {
             string query = "";
             string subQuery = "";
@@ -105,7 +103,7 @@ where coalesce(C.ClassURLPattern, '') <> '' and C.ClassName <> 'cms.root')", nul
             }
         }
 
-        private static void TurnContainerToCouple(DataClassInfo classObj)
+        private void TurnContainerToCouple(DataClassInfo classObj)
         {
             string query = @"-- DO NOT MODIFY BELOW
 declare @ClassName nvarchar(200);

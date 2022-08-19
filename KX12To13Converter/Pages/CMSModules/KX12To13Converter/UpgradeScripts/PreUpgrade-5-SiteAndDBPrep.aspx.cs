@@ -1,12 +1,19 @@
-﻿using CMS.Helpers;
+﻿using CMS.Core;
+using CMS.Helpers;
 using CMS.UIControls;
-using KX12To13Converter.Base.PageOperations;
+using KX12To13Converter.Interfaces;
 using System;
 
 namespace KX12To13Converter.Pages.CMSModules.KX12To13Converter.UpgradeScripts
 {
     public partial class SiteAndDBPrep : CMSPage
     {
+        public IPreUpgrade5SiteAndDBPrep PreUpgrade5SiteAndDBPrep { get; }
+
+        public SiteAndDBPrep()
+        {
+            PreUpgrade5SiteAndDBPrep = Service.Resolve<IPreUpgrade5SiteAndDBPrep>();
+        }
 
         protected override void OnInit(EventArgs e)
         {

@@ -6,14 +6,28 @@ using System.Collections.Generic;
 using Formatting = Newtonsoft.Json.Formatting;
 using TreeNode = CMS.DocumentEngine.TreeNode;
 using CMS.SiteProvider;
-using KX12To13Converter.Base.Classes.PortalEngineToPageBuilder;
-using KX12To13Converter.Base.PageOperations;
 using CMS.UIControls;
+using CMS.DocumentEngine;
+using System.Linq;
+using KX12To13Converter.PortalEngineToPageBuilder;
+using KX12To13Converter.Interfaces;
+using KX12To13Converter.PortalEngineToPageBuilder.EventArgs;
 
 namespace KX12To13Converter.Pages.CMSModules.KX12To13Converter.WidgetToPageBuilder
 {
     public partial class RunConversion : CMSPage
     {
+        public IPortalEngineToMVCConverterRetriever PortalEngineToMVCConverterRetriever { get; }
+        public IConversionProcessingMethods ConversionProcessingMethods { get; }
+        public IRunConversionMethods RunConversionMethods { get; }
+
+        public RunConversion()
+        {
+            PortalEngineToMVCConverterRetriever = CMS.Core.Service.Resolve<IPortalEngineToMVCConverterRetriever>();
+            ConversionProcessingMethods = CMS.Core.Service.Resolve<IConversionProcessingMethods>();
+            RunConversionMethods = CMS.Core.Service.Resolve<IRunConversionMethods>();
+        }
+
         protected override void OnInit(EventArgs e)
         {
             base.OnInit(e);
@@ -84,25 +98,34 @@ namespace KX12To13Converter.Pages.CMSModules.KX12To13Converter.WidgetToPageBuild
                 widgetConfiguration = JsonConvert.DeserializeObject<List<ConverterWidgetConfiguration>>(SettingsKeyInfoProvider.GetValue("ConverterWidgetConfigJson", SiteContext.CurrentSiteID));
             }
 
-            var converter = new PortalEngineToMVCConverter(templateConfiguration, sectionConfiguration, defaultSectionConfiguration, widgetConfiguration, new ProcessDocumentSettings());
+            var converter = PortalEngineToMVCConverterRetriever.GetConverter(templateConfiguration, sectionConfiguration, defaultSectionConfiguration, widgetConfiguration);
 
-            switch (ddlMode.SelectedValue.ToLower())
+            if (ddlMode.SelectedValue.Equals("preview", StringComparison.OrdinalIgnoreCase))
             {
-                case "preview":
-                    var previewDoc = WidgetConverterMethods.GetDocumentByPath(tbxPreviewPath.Value.ToString());
+                var previewDoc = RunConversionMethods.GetDocumentByPath(tbxPreviewPath.Value.ToString());
+                if(previewDoc != null) { 
                     converter.ProcessesDocuments(new List<TreeNode>() { previewDoc }, HandlePreviewDocument);
-                    break;
-                case "processandsave":
-                case "processandsend":
-                    var documents = WidgetConverterMethods.GetDocumentsByPath(tbxProcessPath.Value.ToString());
-                    if(ddlMode.SelectedValue.ToLower().Equals("processandsave", StringComparison.OrdinalIgnoreCase))
-                    {
-                        converter.ProcessesDocuments(documents, WidgetConverterMethods.HandleProcessAndSaveDocument);
-                    } else
-                    {
-                        converter.ProcessesDocuments(documents, WidgetConverterMethods.HandleProcessAndSendDocument);
-                    }
-                    break;
+                } else
+                {
+                    tbxJsonResultTemplate.Text = $"NO PAGE FOUND AT {tbxPreviewPath.Value}";
+                    tbxJsonResultWidgets.Text = $"NO PAGE FOUND AT {tbxPreviewPath.Value}";
+                }
+            }
+            else
+            {
+                var documents = RunConversionMethods.GetDocumentsByPath(tbxProcessPath.Value.ToString());
+                switch (ddlMode.SelectedValue.ToLower())
+                {
+                    case "process":
+                        converter.ProcessesDocuments(documents, ConversionProcessingMethods.HandleProcessOnly);
+                        break;
+                    case "processandsave":
+                        converter.ProcessesDocuments(documents, ConversionProcessingMethods.HandleProcessAndSaveDocument);
+                        break;
+                    case "processandsend":
+                        converter.ProcessesDocuments(documents, ConversionProcessingMethods.HandleProcessAndSendDocument);
+                        break;
+                }
             }
         }
 
@@ -112,6 +135,8 @@ namespace KX12To13Converter.Pages.CMSModules.KX12To13Converter.WidgetToPageBuild
             tbxJsonResultWidgets.Text = (JsonConvert.SerializeObject(results.PageBuilderData.ZoneConfiguration, Formatting.Indented).Trim());
             return true;
         }
+
+
 
     }
 }

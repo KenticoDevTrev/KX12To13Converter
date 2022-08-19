@@ -1,23 +1,20 @@
 ﻿using CMS.DataEngine;
 using CMS.Helpers;
+using KX12To13Converter.Interfaces;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace KX12To13Converter.Base.PageOperations
 {
-    public static class PreUpgrade5SiteAndDBPrep
+    public class PreUpgrade5SiteAndDBPrep : IPreUpgrade5SiteAndDBPrep
     {
-        public static void SetSitesToContentOnly()
+        public void SetSitesToContentOnly()
         {
             ConnectionHelper.ExecuteNonQuery("update CMS_Site set SitePresentationURL = '', SiteIsContentOnly = 1", null, QueryTypeEnum.SQLQuery);
             CacheHelper.ClearCache();
             SystemHelper.RestartApplication();
         }
 
-        public static void RunPreUpgradeFixes(ref string results)
+        public void RunPreUpgradeFixes(ref string results)
         {
             ClearUIElements(ref results);
             ClearResources(ref results);
@@ -29,12 +26,12 @@ namespace KX12To13Converter.Base.PageOperations
             SystemHelper.RestartApplication();
         }
 
-        public static void SetCompatibilityLevelForDatabase(string databaseName, ref string results)
+        public void SetCompatibilityLevelForDatabase(string databaseName, ref string results)
         {
             SetCompatibilityLevel(databaseName, ref results);
         }
 
-        private static void RemovePMTables(ref string results)
+        private void RemovePMTables(ref string results)
         {
             try
             {
@@ -68,7 +65,7 @@ drop table PM_ProjectTaskStatus
             }
         }
 
-        private static void SetCompatibilityLevel(string databaseName, ref string results)
+        private void SetCompatibilityLevel(string databaseName, ref string results)
         {
             try
             {
@@ -98,7 +95,7 @@ ALTER DATABASE [" + SqlHelper.EscapeQuotes(databaseName) + "] SET COMPATIBILITY_
             }
         }
 
-        private static void CreateMissingContraints(ref string results)
+        private void CreateMissingContraints(ref string results)
         {
             try
             {
@@ -133,7 +130,7 @@ ALTER TABLE [dbo].[Analytics_Statistics] ADD  CONSTRAINT [DEFAULT_Analytics_Stat
             }
         }
 
-        private static void DropStyleSheets(ref string results)
+        private void DropStyleSheets(ref string results)
         {
             try
             {
@@ -166,7 +163,7 @@ delete from [CMS_CssStylesheet]
             }
         }
 
-        private static void RemoveTemplates(ref string results)
+        private void RemoveTemplates(ref string results)
         {
             try
             {
@@ -225,7 +222,7 @@ DELETE FROM [CMS_PageTemplate]
             }
         }
 
-        private static void ClearResources(ref string results)
+        private void ClearResources(ref string results)
         {
             try
             {
@@ -313,7 +310,7 @@ DELETE FROM [CMS_Resource] WHERE [ResourceGUID]  =@elementIdentifier
             }
         }
 
-        private static void ClearUIElements(ref string results)
+        private void ClearUIElements(ref string results)
         {
             try
             {

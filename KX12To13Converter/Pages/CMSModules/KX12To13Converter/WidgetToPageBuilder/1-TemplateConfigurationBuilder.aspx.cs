@@ -1,5 +1,6 @@
-﻿using CMS.UIControls;
-using KX12To13Converter.Base.PageOperations;
+﻿using CMS.Core;
+using CMS.UIControls;
+using KX12To13Converter.Interfaces;
 using Newtonsoft.Json;
 using System;
 
@@ -7,10 +8,18 @@ namespace KX12To13Converter.Pages.CMSModules.KX12To13Converter.WidgetToPageBuild
 {
     public partial class TemplateConfigurationBuilder : CMSPage
     {
+
+        public TemplateConfigurationBuilder()
+        {
+            TemplateConfigurationBuilderMethods = Service.Resolve<ITemplateConfigurationBuilderMethods>();
+        }
+
+        public ITemplateConfigurationBuilderMethods TemplateConfigurationBuilderMethods { get; }
+
         protected void btnGenerateTemplates_Click(object sender, EventArgs e)
         {
             // Get list of templates to convert.
-
+            
             var includedTemplateIds = TemplateConfigurationBuilderMethods.GetTemplateIdsByCodeName(tbxIncluded.Text.Split("\n\r;,|".ToCharArray(), StringSplitOptions.RemoveEmptyEntries));
             var excludedTemplateIds = TemplateConfigurationBuilderMethods.GetTemplateIdsByCodeName(tbxExcluded.Text.Split("\n\r;,|".ToCharArray(), StringSplitOptions.RemoveEmptyEntries));
 

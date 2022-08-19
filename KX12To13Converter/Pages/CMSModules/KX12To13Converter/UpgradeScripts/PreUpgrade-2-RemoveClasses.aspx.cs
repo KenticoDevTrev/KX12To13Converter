@@ -1,16 +1,23 @@
 ﻿using CMS.DataEngine;
 using CMS.Helpers;
 using CMS.UIControls;
-using KX12To13Converter.Base.PageOperations;
 using System;
 using System.Data;
 using System.Linq;
 using System.Web.UI.WebControls;
+using CMS.Core;
+using KX12To13Converter.Interfaces;
 
 namespace KX12To13Converter.Pages.CMSModules.KX12To13Converter.UpgradeScripts
 {
     public partial class RemoveClasses : CMSPage
     {
+        public IPreUpgrade2RemoveClasses PreUpgrade2RemoveClasses { get; }
+
+        public RemoveClasses()
+        {
+            PreUpgrade2RemoveClasses = Service.Resolve<IPreUpgrade2RemoveClasses>();
+        }
 
         protected override void OnInit(EventArgs e)
         {

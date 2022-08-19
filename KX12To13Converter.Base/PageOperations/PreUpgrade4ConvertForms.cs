@@ -1,19 +1,18 @@
 ﻿using CMS.DataEngine;
 using CMS.Helpers;
 using CMS.OnlineForms;
+using KX12To13Converter.Interfaces;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Xml;
 
 namespace KX12To13Converter.Base.PageOperations
 {
-    public static class PreUpgrade4ConvertForms
+    public class PreUpgrade4ConvertForms : IPreUpgrade4ConvertForms
     {
 
-        public static IEnumerable<string> GetAllFormControlNames()
+        public IEnumerable<string> GetAllFormControlNames()
         {
             var formControls = new List<string>();
             foreach (var classObj in DataClassInfoProvider.GetClasses()
@@ -30,7 +29,7 @@ namespace KX12To13Converter.Base.PageOperations
             return formControls.Distinct().OrderBy(x => x).ToList();
         }
 
-        public static void ConvertForms(Dictionary<string, string> oldToNew, string defaultSectionIdentifier, string defaultSectionType)
+        public void ConvertForms(Dictionary<string, string> oldToNew, string defaultSectionIdentifier, string defaultSectionType)
         {
             foreach (var form in BizFormInfoProvider.GetBizForms())
             {
