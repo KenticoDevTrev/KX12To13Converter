@@ -34,7 +34,7 @@ namespace KX12To13Converter.NuGet
                 e.Manifest.Metadata.IconUrl = "https://www.hbs.net/HBS/media/Favicon/favicon-96x96.png";
                 e.Manifest.Metadata.Tags = "Kentico Xperience 12 13 Converter Migrater";
                 e.Manifest.Metadata.Id = "KX12To13Converter.Admin";
-                e.Manifest.Metadata.ReleaseNotes = "Admin module created";
+                e.Manifest.Metadata.ReleaseNotes = "Improper Dependency Version for Kentico.Libraries";
                 // Add nuget dependencies
 
                 // Add dependencies
@@ -46,8 +46,8 @@ namespace KX12To13Converter.NuGet
                             new ManifestDependency()
                             {
                                 Id="Kentico.Libraries",
-                                Include = "12.29.0",
-                                Version = "12.29.0",
+                                Include = "12.0.29",
+                                Version = "12.0.29",
                                 Exclude = "13.0.0"
                             },
                              new ManifestDependency()
