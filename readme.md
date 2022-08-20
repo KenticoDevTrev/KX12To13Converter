@@ -10,11 +10,12 @@ Kentico does not support migrating Kentico Xperience 12 Portal engine to Kentico
 
 1. Install `KX12To13Converter.Admin` Nuget Package on your Kentico Application
 2. Either install the `KX12To13Converter.Base` Nuget Package on your Kentico Application, OR clone down the KX12To13Converter.Base class library from this repository and include it in your solution and reference it on your Kentico Application (for easier debugging).
-3. Rebuild your web application
-4. Log into Kentico as a Global Administrator
-5. Go to Modules
-6. Search and edit `KX12 to 13 Converter`
-7. Go to `Sites` and add to your site.
+3. You will probably also need to upgrade the `Kentico.Libraries library` to your KX12 instance Hotfix (since these packages depend on this library).
+4. Rebuild your web application
+5. Log into Kentico as a Global Administrator
+6. Go to Modules
+7. Search and edit `KX12 to 13 Converter`
+8. Go to `Sites` and add to your site.
 
 # Usage - Upgrade Operations
 When attempting an upgrade, these Pre Upgrade Operations will help convert your portal engine site into a MVC-like site.  Each page has instructions on it to aid you.
