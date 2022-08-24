@@ -17,6 +17,9 @@ Kentico does not support migrating Kentico Xperience 12 Portal engine to Kentico
 7. Search and edit `KX12 to 13 Converter`
 8. Go to `Sites` and add to your site.
 
+# Wiki
+This repo has a [wiki](https://github.com/KenticoDevTrev/KX12To13Converter/wiki) with tips, tricks, sql queries and c# scripts to help you during this processes, please read through the [wiki](https://github.com/KenticoDevTrev/KX12To13Converter/wiki) before you begin your journey.
+
 # Usage - Upgrade Operations
 When attempting an upgrade, these Pre Upgrade Operations will help convert your portal engine site into a MVC-like site.  Each page has instructions on it to aid you.
 
