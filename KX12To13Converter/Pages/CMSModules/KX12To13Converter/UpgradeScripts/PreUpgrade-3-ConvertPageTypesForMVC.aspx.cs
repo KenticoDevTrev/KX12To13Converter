@@ -228,7 +228,7 @@ namespace KX12To13Converter.Pages.CMSModules.KX12To13Converter.UpgradeScripts
                 DropDownList ddlControl = (DropDownList)pnl.FindControl($"ddlConversion1_{classID}");
                 TextBox txtControl = (TextBox)pnl.FindControl($"tbxConversion1_{classID}");
 
-                PreUpgrade3ConvertPageTypesForMVC.AdjustClass(ddlControl.SelectedValue, txtControl.Text, classID);
+                PreUpgrade3ConvertPageTypesForMVC.AdjustClass(ddlControl.SelectedValue, txtControl?.Text, classID);
             }
 
             CacheHelper.ClearCache();

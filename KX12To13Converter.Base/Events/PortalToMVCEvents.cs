@@ -4,6 +4,8 @@ namespace KX12To13Converter.Events
 {
     public static class PortalToMVCEvents
     {
+        public static BuildPageFindSectionWebpartEventHandler FindParentSectionWebpart;
+
         public static ProcessPageEventHandler ProcessPage;
 
         public static ProcessTemplateEventHandler ProcessTemplate;
@@ -17,6 +19,11 @@ namespace KX12To13Converter.Events
         public static ProcessWidgetEventHandler ProcessWidget;
         static PortalToMVCEvents()
         {
+            FindParentSectionWebpart = new BuildPageFindSectionWebpartEventHandler()
+            {
+                Name = "PortalToMVCEvents.FindParentSectionWebpart"
+            };
+
             ProcessPage = new ProcessPageEventHandler()
             {
                 Name = "PortalToMVCEvents.ProcessPage"

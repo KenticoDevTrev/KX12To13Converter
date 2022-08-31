@@ -105,10 +105,10 @@ namespace KX12To13Converter.Base.QueueProcessor
             // Loop
             while (SettingsKeyInfoProvider.GetBoolValue("ConversionSendQueueEnabled", SiteContext.CurrentSiteID))
             {
-                var nextConversions =
-                    ConnectionHelper.ExecuteQuery($"select top 10 * from KX12To13Converter_PageBuilderConversions inner join View_CMS_Tree_Joined on DocumentID = PageBuilderConversionDocumentID with (nolock) where {nameof(PageBuilderConversionsInfo.PageBuilderConversionMarkedForSend)} = 1", null, QueryTypeEnum.SQLQuery)
-                    .Tables[0].Rows.Cast<DataRow>()
-                    .Select(x => new Tuple<TreeNode, PageBuilderConversionsInfo>(TreeNode.New(x), new PageBuilderConversionsInfo(x))).ToList();
+                var nextConversions = PageBuilderConversionsInfoProvider.GetPageBuilderConversions()
+                    .TopN(10)
+                    .WhereEquals(nameof(PageBuilderConversionsInfo.PageBuilderConversionMarkedForSend), true)
+                    .TypedResult;
 
                 // If nothing, wait a second and try again
                 if (!nextConversions.Any())
@@ -120,7 +120,7 @@ namespace KX12To13Converter.Base.QueueProcessor
                 // Convert each document then update the conversion item
                 foreach (var nextConversion in nextConversions)
                 {
-                    ConversionProcessingMethods.SendDocument(nextConversion.Item1, nextConversion.Item2);
+                    ConversionProcessingMethods.SendDocument(nextConversion);
                 }
             }
         }

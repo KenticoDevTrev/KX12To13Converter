@@ -16,3 +16,4 @@ using KX12To13Converter.Base.Classes.PortalEngineToPageBuilder;
 [assembly: RegisterImplementation(typeof(ISectionConfigurationBuilderMethods), typeof(SectionConfigurationBuilderMethods), Priority = RegistrationPriority.SystemDefault)]
 [assembly: RegisterImplementation(typeof(ITemplateConfigurationBuilderMethods), typeof(TemplateConfigurationBuilderMethods), Priority = RegistrationPriority.SystemDefault)]
 [assembly: RegisterImplementation(typeof(IWidgetConfigurationBuilderMethods), typeof(WidgetConfigurationBuilderMethods), Priority = RegistrationPriority.SystemDefault)]
+[assembly: RegisterImplementation(typeof(IPageBuilderUnigridExtensionMethods), typeof(PageBuilderUnigridExtensionMethods), Priority = RegistrationPriority.SystemDefault)]

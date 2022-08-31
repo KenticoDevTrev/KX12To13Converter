@@ -1,4 +1,5 @@
 ﻿using CMS.Base;
+using CMS.DataEngine;
 using CMS.DocumentEngine;
 using CMS.FormEngine;
 using CMS.Helpers;
@@ -43,14 +44,24 @@ namespace KX12To13Converter.Base.Classes.PortalEngineToPageBuilder
         {
             TemplateDictionary = PageTemplateInfoProvider.GetTemplates().TypedResult.ToDictionary(key => key.PageTemplateId, value => value);
 
+            // If all configurations are present, then use database value for ignore if missing in configuration, otherwise don't.
+            if ((TemplateConfigurations?.Any() ?? false) && (SectionConfigurations?.Any() ?? false) && DefaultSectionConfiguration != null && (WidgetConfigurations?.Any() ?? false))
+            {
+                IgnoreIfMissingInConfig = ValidationHelper.GetBoolean(SettingsKeyInfoProvider.GetValue("IgnoreIfMissingInConfiguration"), true);
+            }
+            else
+            {
+                IgnoreIfMissingInConfig = false;
+            }
             WebpartDictionary = WebPartInfoProvider.GetWebParts().TypedResult.ToDictionary(key => key.WebPartID, value => value);
+
 
 
             // Build widget dictionaries of Layout, Inline, and Editors
             var allWidgets = WidgetInfoProvider.GetWidgets().TypedResult;
 
             var allWidgetNames = allWidgets.Select(x => x.WidgetName.ToLower());
-           
+
             AllWidgetToVisibleProperties = allWidgets.ToDictionary(key => key.WidgetName.ToLowerInvariant(), value => GetVisibleProperties(value));
 
             LayoutWidgetDictionary = allWidgets.Where(x => WebpartDictionary[x.WidgetWebPartID].WebPartType == (int)WebPartTypeEnum.Layout).ToDictionary(key => key.WidgetName.ToLowerInvariant(), value => value);
@@ -117,6 +128,7 @@ namespace KX12To13Converter.Base.Classes.PortalEngineToPageBuilder
         public Dictionary<string, List<FormFieldInfo>> AllWidgetToVisibleProperties { get; private set; }
         public Dictionary<string, WidgetInfo> LayoutWidgetDictionary { get; private set; }
         public Dictionary<int, WebPartInfo> WebpartDictionary { get; private set; }
+        public bool IgnoreIfMissingInConfig { get; private set; }
 
         public void ProcessesDocuments(IEnumerable<TreeNode> documents, Func<TreeNode, PortalToMVCProcessDocumentPrimaryEventArgs, bool> handler)
         {
@@ -188,6 +200,19 @@ namespace KX12To13Converter.Base.Classes.PortalEngineToPageBuilder
                     // ProcessTemplate.Execute
                     ProcessTemplate_Execute(templateEventArgs.PortalEngineTemplate, templateEventArgs.PageBuilderTemplate);
                 }
+                // If configuration missing
+                if (string.IsNullOrWhiteSpace(templateEventArgs.PageBuilderTemplate.Identifier) || templateEventArgs.PageBuilderTemplate.Identifier.Equals("IGNORE", StringComparison.OrdinalIgnoreCase))
+                {
+                    portalToMVCEventArgs.ConversionNotes.Add(new ConversionNote()
+                    {
+                        IsError = false,
+                        Source = "HandleTemplate",
+                        Type = "SkippedConfigurationTemplate",
+                        Description = $"Template {templateEventArgs.PortalEngineTemplate.CodeName} is set to either IGNORE or not in the template configuration.  Stopping Conversion."
+                    });
+                    portalToMVCEventArgs.CancelOperation = true;
+                    return;
+                }
 
                 // ProcessTemplate After
                 processTemplateEventHandler.FinishEvent();
@@ -210,6 +235,14 @@ namespace KX12To13Converter.Base.Classes.PortalEngineToPageBuilder
         private void ProcessTemplate_Execute(PageTemplateInfo peTemplate, PageTemplateConfiguration pbTemplate)
         {
             var templateConfig = TemplateConfigurations.Where(x => x.PE_CodeName.Equals(peTemplate.CodeName, StringComparison.OrdinalIgnoreCase)).FirstOrDefault();
+
+            // If missing configuration
+            if (IgnoreIfMissingInConfig && templateConfig == null)
+            {
+                pbTemplate.Identifier = string.Empty;
+                return;
+            }
+
             pbTemplate.ConfigurationIdentifier = Guid.NewGuid();
 
             if (templateConfig != null)
@@ -250,7 +283,7 @@ namespace KX12To13Converter.Base.Classes.PortalEngineToPageBuilder
                 portalToMVCEventArgs.PageBuilderData.ZoneConfiguration.EditableAreas.Add(pbZoneEditableArea);
             }
         }
-        
+
         private void HandleWebpartZone(PortalWebpartZone peZoneEditableArea, TemplateConfiguration templateConfig, PortalConversionProcessorContext context)
         {
             var portalToMVCEventArgs = context.portalToMVCEventArgs;
@@ -273,6 +306,24 @@ namespace KX12To13Converter.Base.Classes.PortalEngineToPageBuilder
                 {
                     // ProcessZone Default
                     ProcessZone_Execute(templateConfig, editableAreaArgs.PortalEditableArea, editableAreaArgs.EditableAreaConfiguration);
+                }
+
+                // If configuration missing
+                if (string.IsNullOrWhiteSpace(editableAreaArgs.EditableAreaConfiguration?.Identifier ?? String.Empty))
+                {
+                    portalToMVCEventArgs.ConversionNotes.Add(new ConversionNote()
+                    {
+                        IsError = false,
+                        Source = "HandleWebpartZone",
+                        Type = "SkippedConfigurationWebpartZone",
+                        Description = $"No configuration found for zone {GetPEZoneID(editableAreaArgs.PortalEditableArea)} in template configuration, skipping."
+                    });
+                    return;
+                }
+                else if (editableAreaArgs.EditableAreaConfiguration?.Identifier?.Equals("IGNORE", StringComparison.OrdinalIgnoreCase) ?? false)
+                {
+                    // Ignoring, no need for note.
+                    return;
                 }
 
                 // ProcessZone.After
@@ -308,6 +359,11 @@ namespace KX12To13Converter.Base.Classes.PortalEngineToPageBuilder
 
         private void ProcessZone_Execute(TemplateConfiguration templateConfig, PortalWebpartZone peZoneEditableArea, EditableAreaConfiguration pbZoneEditableArea)
         {
+            string identifier = GetPBEditableAreaIdentifier(peZoneEditableArea, templateConfig);
+            if (string.IsNullOrWhiteSpace(identifier))
+            {
+                return;
+            }
             pbZoneEditableArea.Identifier = GetPBEditableAreaIdentifier(peZoneEditableArea, templateConfig);
         }
 
@@ -347,6 +403,24 @@ namespace KX12To13Converter.Base.Classes.PortalEngineToPageBuilder
                     // ProcessSection.Execute
                     ProcessSectionExecute(sectionEventArgs.PortalEngineWidgetSection, sectionEventArgs.PageBuilderSection);
                 }
+                // If configuration missing
+                if (string.IsNullOrWhiteSpace(sectionEventArgs.PageBuilderSection?.TypeIdentifier ?? String.Empty))
+                {
+                    portalToMVCEventArgs.ConversionNotes.Add(new ConversionNote()
+                    {
+                        IsError = false,
+                        Source = "HandleWidgetSection",
+                        Type = "SkippedConfigurationSection",
+                        Description = $"No configuration found for {(sectionEventArgs.PortalEngineWidgetSection.IsDefault ? "DEFAULT" : sectionEventArgs.PortalEngineWidgetSection?.SectionWidget?.WebPartType ?? "[No Section Found]")} in Sections configuration, skipping."
+                    });
+                    return;
+                }
+                else if (sectionEventArgs.PageBuilderSection?.TypeIdentifier?.Equals("IGNORE", StringComparison.OrdinalIgnoreCase) ?? false)
+                {
+                    // no need to report
+                    return;
+                }
+
 
                 sectionEventHandler.FinishEvent();
                 if (portalToMVCEventArgs.Handled)
@@ -374,6 +448,20 @@ namespace KX12To13Converter.Base.Classes.PortalEngineToPageBuilder
         private void ProcessSectionExecute(PortalWidgetSection peSection, SectionConfiguration pbSection)
         {
             var sectionConfiguration = peSection.IsDefault ? null : SectionConfigurations.Where(x => (x.PE_WidgetZoneSection?.SectionWidgetCodeName ?? String.Empty).Equals(peSection.IsDefault ? Guid.NewGuid().ToString() : peSection.SectionWidget.WebPartType, StringComparison.OrdinalIgnoreCase)).FirstOrDefault();
+
+            // Skip if missing config
+            if (!peSection.IsDefault && IgnoreIfMissingInConfig && sectionConfiguration == null)
+            {
+                pbSection.TypeIdentifier = String.Empty;
+                return;
+            }
+            // Skip if default and no default section
+            if (peSection.IsDefault && DefaultSectionConfiguration == null)
+            {
+                pbSection.TypeIdentifier = String.Empty;
+                return;
+            }
+
             Dictionary<string, string> keyValues = new Dictionary<string, string>();
             pbSection.Identifier = Guid.NewGuid();
 
@@ -399,11 +487,11 @@ namespace KX12To13Converter.Base.Classes.PortalEngineToPageBuilder
                     {
                         if (keyValues.ContainsKey(key))
                         {
-                            keyValues[key] = sectionConfiguration.PB_Section.AdditionalKeyValues[key].ToString();
+                            keyValues[key] = sectionConfiguration.PB_Section.AdditionalKeyValues[key]?.ToString();
                         }
                         else
                         {
-                            keyValues.Add(key, sectionConfiguration.PB_Section.AdditionalKeyValues[key].ToString());
+                            keyValues.Add(key, sectionConfiguration.PB_Section.AdditionalKeyValues[key]?.ToString());
                         }
                     }
                 }
@@ -486,7 +574,7 @@ namespace KX12To13Converter.Base.Classes.PortalEngineToPageBuilder
             pbWidgetZone = sectionZoneEventArgs.PageBuilderZoneConfig;
 
             // Ignore if the Zone name is Ignore, but in this case not if empty or null as the zone name is optional
-            if((pbWidgetZone?.Name ?? String.Empty).Equals("IGNORE"))
+            if ((pbWidgetZone?.Name ?? String.Empty).Equals("IGNORE"))
             {
                 return;
             }
@@ -531,6 +619,27 @@ namespace KX12To13Converter.Base.Classes.PortalEngineToPageBuilder
                 {
                     ProcessWidgetExecute(portalToMVCEventArgs, peWidget, pbWidget);
                 }
+                // If configuration missing
+                if (string.IsNullOrWhiteSpace(pbWidget?.TypeIdentifier ?? String.Empty))
+                {
+                    // only give error if the given widget is not a layout widget, as layout widgets without any inner content should be ignored.
+                    if (!LayoutWidgetDictionary.ContainsKey(peWidget?.Widget?.WebPartType?.ToLower() ?? String.Empty))
+                    {
+                        portalToMVCEventArgs.ConversionNotes.Add(new ConversionNote()
+                        {
+                            IsError = false,
+                            Source = "HandleWidget",
+                            Type = "SkippedConfigurationWidget",
+                            Description = $"No configuration found for {peWidget.Widget.WebPartType} in Widgets configuration, skipping."
+                        });
+                    }
+                    return;
+                }
+                else if (pbWidget?.TypeIdentifier?.Equals("IGNORE", StringComparison.OrdinalIgnoreCase) ?? false)
+                {
+                    // Ignored, just return.
+                    return;
+                }
 
                 widgetEventHandler.FinishEvent();
                 if (portalToMVCEventArgs.Handled)
@@ -551,29 +660,45 @@ namespace KX12To13Converter.Base.Classes.PortalEngineToPageBuilder
 
         private void ProcessWidgetExecute(PortalToMVCProcessDocumentPrimaryEventArgs portalToMVCEventArgs, PortalWidget peWidget, WidgetConfiguration pbWidget)
         {
-            var widgetConfiguation = WidgetConfigurations.Where(x => (x.PE_Widget?.PE_WidgetCodeName ?? Guid.NewGuid().ToString()).Equals(peWidget.Widget.WebPartType, StringComparison.OrdinalIgnoreCase)).FirstOrDefault();
+            var webpartInstance = peWidget.Widget;
+            if(webpartInstance.WebPartType.Equals("widget", StringComparison.OrdinalIgnoreCase) && webpartInstance.CurrentVariantInstance != null)
+            {
+                webpartInstance = webpartInstance.CurrentVariantInstance;
+            }
+
+            var widgetConfiguation = WidgetConfigurations.Where(x => (x.PE_Widget?.PE_WidgetCodeName ?? Guid.NewGuid().ToString()).Equals(webpartInstance.WebPartType, StringComparison.OrdinalIgnoreCase)).FirstOrDefault();
+
+            // If missing configuration
+            if (IgnoreIfMissingInConfig && widgetConfiguation == null)
+            {
+                pbWidget.TypeIdentifier = string.Empty;
+                return;
+            }
+
             pbWidget.Identifier = Guid.NewGuid();
 
             // Can't process if no properties found
             List<FormFieldInfo> widgetFields = new List<FormFieldInfo>();
-            if (!AllWidgetToVisibleProperties.ContainsKey(peWidget.Widget.WebPartType.ToLowerInvariant()))
+            if (!AllWidgetToVisibleProperties.ContainsKey(webpartInstance.WebPartType.ToLowerInvariant()))
             {
                 portalToMVCEventArgs.ConversionNotes.Add(new ConversionNote()
                 {
                     IsError = true,
                     Source = "ProcessWidget",
                     Type = "WidgetNotFound",
-                    Description = $"Could not find a widget with webpart type name {peWidget.Widget.WebPartType}"
+                    Description = $"Could not find a widget with webpart type name {webpartInstance.WebPartType}"
                 });
-            } else { 
-                widgetFields = AllWidgetToVisibleProperties[peWidget.Widget.WebPartType.ToLowerInvariant()];
+            }
+            else
+            {
+                widgetFields = AllWidgetToVisibleProperties[webpartInstance.WebPartType.ToLowerInvariant()];
             }
 
             var reservedKeys = new string[] { "contentbefore", "contentafter", "htmlbefore", "htmlafter", "container", "containername", "containertitle", "containercssclass", "containercustomcontent" };
 
             if (widgetConfiguation != null)
             {
-                pbWidget.TypeIdentifier = widgetConfiguation.PB_Widget.PB_WidgetIdentifier.Replace("INHERIT", peWidget.Widget.WebPartType);
+                pbWidget.TypeIdentifier = widgetConfiguation.PB_Widget.PB_WidgetIdentifier.Replace("INHERIT", webpartInstance.WebPartType);
                 pbWidget.Variants = new List<WidgetVariantConfiguration>();
 
                 Dictionary<string, string> properties = new Dictionary<string, string>();
@@ -581,23 +706,43 @@ namespace KX12To13Converter.Base.Classes.PortalEngineToPageBuilder
                 foreach (var keyvalue in widgetConfiguation.PE_Widget.KeyValues.Where(x => !(x.OutKey?.Equals("IGNORE", StringComparison.OrdinalIgnoreCase) ?? false) && !reservedKeys.Contains(x.Key.ToLowerInvariant())))
                 {
                     var widgetPropertyValue = keyvalue.Value?.Replace("INHERIT", string.Empty) ?? string.Empty;
-                    widgetPropertyValue = !string.IsNullOrWhiteSpace(widgetPropertyValue) ? widgetPropertyValue : peWidget.Widget.GetValue(keyvalue.Key)?.ToString();
+                    widgetPropertyValue = !string.IsNullOrWhiteSpace(widgetPropertyValue) ? widgetPropertyValue : webpartInstance.GetValue(keyvalue.Key)?.ToString();
                     widgetPropertyValue = !string.IsNullOrWhiteSpace(widgetPropertyValue) ? widgetPropertyValue : keyvalue.DefaultValue;
-                    // Handle editable image and text
-                    if (peWidget.WidgetType == WebpartType.EditableImage && keyvalue.Key.Equals("EditableImageUrl", StringComparison.OrdinalIgnoreCase))
+                    // Handle editable image and text, the WidgetType may be either EditableImage/EditableTExt or Webpart if it's a widget version of it, so need to check values.
+                    if ((peWidget.WidgetType == WebpartType.EditableImage || !string.IsNullOrWhiteSpace(peWidget.EditableImageUrl)) && keyvalue.Key.Equals("EditableImageUrl", StringComparison.OrdinalIgnoreCase))
                     {
                         widgetPropertyValue = peWidget.EditableImageUrl;
                     }
-                    else if (peWidget.WidgetType == WebpartType.EditableImage && keyvalue.Key.Equals("AlternateText", StringComparison.OrdinalIgnoreCase))
+                    else if ((peWidget.WidgetType == WebpartType.EditableImage || !string.IsNullOrWhiteSpace(peWidget.EditableImageAlt)) && keyvalue.Key.Equals("AlternateText", StringComparison.OrdinalIgnoreCase))
                     {
                         widgetPropertyValue = DataHelper.GetNotEmpty(peWidget.EditableImageAlt, widgetPropertyValue);
                     }
-                    else if (peWidget.WidgetType == WebpartType.EditableText && keyvalue.Key.Equals("EditableText", StringComparison.OrdinalIgnoreCase))
+                    else if ((peWidget.WidgetType == WebpartType.EditableText || !string.IsNullOrWhiteSpace(peWidget.EditableText)) && keyvalue.Key.Equals("EditableText", StringComparison.OrdinalIgnoreCase))
                     {
                         widgetPropertyValue = peWidget.EditableText;
                     }
-
-                    properties.Add((!string.IsNullOrWhiteSpace((keyvalue.OutKey ?? String.Empty).Replace("INHERIT", "")) ? keyvalue.OutKey : keyvalue.Key), widgetPropertyValue);
+                    string key = (!string.IsNullOrWhiteSpace((keyvalue.OutKey ?? String.Empty).Replace("INHERIT", "")) ? keyvalue.OutKey : keyvalue.Key);
+                    try
+                    {
+                        properties.Add(key, widgetPropertyValue);
+                    }
+                    catch (ArgumentException ex)
+                    {
+                        if (ex.Message.Contains("An item with the same key has already been added."))
+                        {
+                            portalToMVCEventArgs.ConversionNotes.Add(new ConversionNote()
+                            {
+                                IsError = true,
+                                Source = "ProcessWidgetExecute",
+                                Type = "DuplicateOutKey",
+                                Description = $"Outkey of {key} found, please check Widget Configuration for ${widgetConfiguation.PE_Widget.PE_WidgetCodeName}"
+                            });
+                        }
+                        else
+                        {
+                            throw ex;
+                        }
+                    }
                 }
                 // Addiitonal Keys
                 foreach (var key in widgetConfiguation.PB_Widget.AdditionalKeyValues.Keys.Where(x => !x.Equals("IGNORE", StringComparison.OrdinalIgnoreCase) && !reservedKeys.Contains(x.ToLowerInvariant())))
@@ -619,13 +764,13 @@ namespace KX12To13Converter.Base.Classes.PortalEngineToPageBuilder
                     var contentBeforeConfig = widgetConfiguation.PE_Widget.KeyValues.Where(x => x.Key.Equals("contentbefore", StringComparison.OrdinalIgnoreCase)).FirstOrDefault();
                     var ContentBefore = DataHelper.GetNotEmpty(peWidget.HtmlBefore, string.Empty);
                     ContentBefore = DataHelper.GetNotEmpty(ContentBefore, contentBeforeConfig?.Value ?? string.Empty);
-                    ContentBefore = DataHelper.GetNotEmpty(ContentBefore, peWidget.Widget.GetValue("ContentBefore")?.ToString() ?? String.Empty);
+                    ContentBefore = DataHelper.GetNotEmpty(ContentBefore, webpartInstance.GetValue("ContentBefore")?.ToString() ?? String.Empty);
                     ContentBefore = DataHelper.GetNotEmpty(ContentBefore, contentBeforeConfig?.DefaultValue ?? string.Empty);
 
                     var contentAfterConfig = widgetConfiguation.PE_Widget.KeyValues.Where(x => x.Key.Equals("contentafter", StringComparison.OrdinalIgnoreCase)).FirstOrDefault();
                     var ContentAfter = DataHelper.GetNotEmpty(peWidget.HtmlAfter, string.Empty);
                     ContentAfter = DataHelper.GetNotEmpty(ContentAfter, contentAfterConfig?.Value ?? string.Empty);
-                    ContentAfter = DataHelper.GetNotEmpty(ContentAfter, peWidget.Widget.GetValue("ContentAfter")?.ToString() ?? String.Empty);
+                    ContentAfter = DataHelper.GetNotEmpty(ContentAfter, webpartInstance.GetValue("ContentAfter")?.ToString() ?? String.Empty);
                     ContentAfter = DataHelper.GetNotEmpty(ContentAfter, contentAfterConfig?.DefaultValue ?? string.Empty);
 
                     if (!string.IsNullOrWhiteSpace(ContentBefore))
@@ -643,26 +788,26 @@ namespace KX12To13Converter.Base.Classes.PortalEngineToPageBuilder
                     var containerConfig = widgetConfiguation.PE_Widget.KeyValues.Where(x => x.Key.Equals("Container", StringComparison.OrdinalIgnoreCase)).FirstOrDefault();
                     var Container = DataHelper.GetNotEmpty(peWidget.ContainerName, string.Empty);
                     Container = DataHelper.GetNotEmpty(Container, containerConfig?.Value ?? string.Empty);
-                    Container = DataHelper.GetNotEmpty(Container, peWidget.Widget.GetValue("Container")?.ToString() ?? String.Empty);
+                    Container = DataHelper.GetNotEmpty(Container, webpartInstance.GetValue("Container")?.ToString() ?? String.Empty);
                     Container = DataHelper.GetNotEmpty(Container, containerConfig?.DefaultValue ?? string.Empty);
 
 
                     var containerTitleConfig = widgetConfiguation.PE_Widget.KeyValues.Where(x => x.Key.Equals("ContainerTitle", StringComparison.OrdinalIgnoreCase)).FirstOrDefault();
                     var ContainerTitle = DataHelper.GetNotEmpty(peWidget.ContainerTitle, string.Empty);
                     ContainerTitle = DataHelper.GetNotEmpty(ContainerTitle, containerTitleConfig?.Value ?? string.Empty);
-                    ContainerTitle = DataHelper.GetNotEmpty(ContainerTitle, peWidget.Widget.GetValue("ContainerTitle")?.ToString() ?? String.Empty);
+                    ContainerTitle = DataHelper.GetNotEmpty(ContainerTitle, webpartInstance.GetValue("ContainerTitle")?.ToString() ?? String.Empty);
                     ContainerTitle = DataHelper.GetNotEmpty(ContainerTitle, containerTitleConfig?.DefaultValue ?? string.Empty);
 
                     var containerCSSConfig = widgetConfiguation.PE_Widget.KeyValues.Where(x => x.Key.Equals("ContainerCSSClass", StringComparison.OrdinalIgnoreCase)).FirstOrDefault();
                     var ContainerCSSClass = DataHelper.GetNotEmpty(peWidget.ContainerCSSClass, string.Empty);
                     ContainerCSSClass = DataHelper.GetNotEmpty(ContainerCSSClass, containerCSSConfig?.Value ?? string.Empty);
-                    ContainerCSSClass = DataHelper.GetNotEmpty(ContainerCSSClass, peWidget.Widget.GetValue("ContainerCSSClass")?.ToString() ?? String.Empty);
+                    ContainerCSSClass = DataHelper.GetNotEmpty(ContainerCSSClass, webpartInstance.GetValue("ContainerCSSClass")?.ToString() ?? String.Empty);
                     ContainerCSSClass = DataHelper.GetNotEmpty(ContainerCSSClass, containerCSSConfig?.DefaultValue ?? string.Empty);
 
                     var containerCustomContentConfig = widgetConfiguation.PE_Widget.KeyValues.Where(x => x.Key.Equals("ContainerCustomContent", StringComparison.OrdinalIgnoreCase)).FirstOrDefault();
                     var ContainerCustomContent = DataHelper.GetNotEmpty(peWidget.ContainerCustomContent, string.Empty);
                     ContainerCustomContent = DataHelper.GetNotEmpty(ContainerCustomContent, containerCustomContentConfig?.Value ?? string.Empty);
-                    ContainerCustomContent = DataHelper.GetNotEmpty(ContainerCustomContent, peWidget.Widget.GetValue("ContainerCustomContent")?.ToString() ?? String.Empty);
+                    ContainerCustomContent = DataHelper.GetNotEmpty(ContainerCustomContent, webpartInstance.GetValue("ContainerCustomContent")?.ToString() ?? String.Empty);
                     ContainerCustomContent = DataHelper.GetNotEmpty(ContainerCustomContent, containerCustomContentConfig?.DefaultValue ?? string.Empty);
 
                     if (!string.IsNullOrWhiteSpace(Container))
@@ -693,16 +838,16 @@ namespace KX12To13Converter.Base.Classes.PortalEngineToPageBuilder
             else
             {
                 // no configuration, just convert any visible property over
-                pbWidget.TypeIdentifier = peWidget.Widget.WebPartType;
+                pbWidget.TypeIdentifier = webpartInstance.WebPartType;
                 pbWidget.Variants = new List<WidgetVariantConfiguration>();
 
                 Dictionary<string, string> properties = new Dictionary<string, string>();
                 foreach (var property in widgetFields)
                 {
-                    properties.Add(property.Name, peWidget.Widget.GetValue(property.Name)?.ToString() ?? property.DefaultValue);
+                    properties.Add(property.Name, webpartInstance.GetValue(property.Name)?.ToString() ?? property.DefaultValue);
                 }
                 // Handle editable image and text
-                if (peWidget.WidgetType == WebpartType.EditableImage)
+                if (peWidget.WidgetType == WebpartType.EditableImage || !string.IsNullOrWhiteSpace(peWidget.EditableImageUrl) || !string.IsNullOrWhiteSpace(peWidget.EditableImageAlt))
                 {
                     properties.Add("EditableImageUrl", peWidget.EditableImageUrl);
                     if (properties.ContainsKey("AlternateText"))
@@ -715,7 +860,7 @@ namespace KX12To13Converter.Base.Classes.PortalEngineToPageBuilder
                     }
 
                 }
-                else if (peWidget.WidgetType == WebpartType.EditableText)
+                else if (peWidget.WidgetType == WebpartType.EditableText || !string.IsNullOrWhiteSpace(peWidget.EditableText))
                 {
                     properties.Add("EditableText", peWidget.EditableText);
                 }
@@ -738,7 +883,20 @@ namespace KX12To13Converter.Base.Classes.PortalEngineToPageBuilder
         private PortalToMVCProcessDocumentPrimaryEventArgs BuildPortalToMVCProcessDocumentPrimaryEventArgs(TreeNode document)
         {
             int templateId = document.DocumentPageTemplateID > 0 ? document.DocumentPageTemplateID : document.NodeTemplateID;
+            var checkDoc = document;
+            if(templateId == 0)
+            {
+                while(checkDoc != null && checkDoc.NodeInheritPageTemplate && templateId == 0)
+                {
+                    checkDoc = checkDoc.Parent;
+                    if(checkDoc != null) { 
+                        templateId = checkDoc.DocumentPageTemplateID > 0 ? checkDoc.DocumentPageTemplateID : checkDoc.NodeTemplateID;
+                    }
+                }
+            }
+            
             var template = GetGeneralTemplateConfiguration(templateId);
+
             // Can't proceed if no template found
             if (template == null)
             {
@@ -753,7 +911,7 @@ namespace KX12To13Converter.Base.Classes.PortalEngineToPageBuilder
                             Source = "BuildPortalToMVCProcessDocumentPrimaryEventArgs",
                             IsError = true,
                             Description = $"No Page template found for document {document.NodeAliasPath} [{document.DocumentCulture}] - {document.NodeSiteName}]",
-                            Type = "NoTemplateFound"
+                            Type = "TemplateNotFound"
                         }
                     }
                 };
@@ -766,7 +924,12 @@ namespace KX12To13Converter.Base.Classes.PortalEngineToPageBuilder
 
             // Now build the portal engine data using the document
             var editableWebParts = document.DocumentContent.EditableWebParts;
-            var pageTemplateInstance = new PageTemplateInstance(document.DocumentWebParts);
+            var pageTemplateInstance = new PageTemplateInstance(document.DocumentWebParts)
+            {
+                ParentPageTemplate = template.Template
+            };
+
+            List<string> documentZonesFound = new List<string>();
 
             // Take care of editable zones on template first
             foreach (var webpartZone in eventArgs.PortalEngineData.TemplateZones.Where(x => x.ZoneType == WebpartType.EditableText || x.ZoneType == WebpartType.EditableImage))
@@ -796,7 +959,7 @@ namespace KX12To13Converter.Base.Classes.PortalEngineToPageBuilder
                     var editableTextInstance = webpartZone.EditableWebpartInstance;
                     var editableTextContent = editableWebParts[webpartZone.EditableWebpartInstance.ControlID.ToLowerInvariant()];
 
-                    var editableTextPortalWidgets = GetEditableTextPartWidgets(editableTextInstance, editableTextContent, editableWebParts);
+                    var editableTextPortalWidgets = GetEditableTextPartWidgets(eventArgs, editableTextInstance, editableTextContent, editableWebParts);
                     var widgetSection = new PortalWidgetSection()
                     {
                         IsDefault = true,
@@ -819,38 +982,60 @@ namespace KX12To13Converter.Base.Classes.PortalEngineToPageBuilder
             foreach (var zone in pageTemplateInstance.WebPartZones.Where(x => !allTemplateZoneIds.Contains(x.ZoneID.ToLowerInvariant()) && !x.WebParts.Any(y => allLayoutWebpartNames.Contains(y.WebPartType, StringComparer.OrdinalIgnoreCase)))
                 .OrderBy(x => x.ZoneID))
             {
-                // Go by parent control next
-                var zoneArray = zone.ZoneID.Split('_');
-                var parentControlIDlookup = zoneArray.Take(zoneArray.Length - 1).Join("_").ToLowerInvariant();
-                var sectionWebpart = allLayoutWebparts.Where(x => x.ControlID.Equals(parentControlIDlookup, StringComparison.OrdinalIgnoreCase)).FirstOrDefault();
-                if (sectionWebpart == null)
+                PortalToMVCBuildPageFindSectionWebpartEventArgs findSectionEventArgs = new PortalToMVCBuildPageFindSectionWebpartEventArgs(zone, allLayoutWebparts)
+                {
+                    ParentLayoutWebpart = null
+                };
+
+                // ProcessPage.Before
+                using (var findParentSectionWebpart = PortalToMVCEvents.FindParentSectionWebpart.StartEvent(findSectionEventArgs))
+                {
+                    if (!findSectionEventArgs.Handled)
+                    {
+                        // Go by parent control next
+                        var zoneArray = zone.ZoneID.Split('_');
+                        var parentControlIDlookup = zoneArray.Take(zoneArray.Length - 1).Join("_").ToLowerInvariant();
+                        var sectionWebpart = allLayoutWebparts.Where(x => x.ControlID.Equals(parentControlIDlookup, StringComparison.OrdinalIgnoreCase)).FirstOrDefault();
+                        findSectionEventArgs.ParentLayoutWebpart = sectionWebpart;
+                    }
+
+                    // ProcessPage.After
+                    findParentSectionWebpart.FinishEvent();
+                }
+
+                if (findSectionEventArgs.ParentLayoutWebpart == null)
                 {
                     // orphan
                     eventArgs.ConversionNotes.Add(new ConversionNote()
                     {
                         IsError = false,
                         Source = "BuildPortalToMVCProcessDocumentPrimaryEventArgs",
-                        Type = "OrphanedSectionWebpart",
-                        Description = $"Could not find parent for zone {zone.ZoneID} (lookup {parentControlIDlookup}) among all the layout webparts ({allLayoutWebparts.Select(x => x.ControlID).Join(", ")})."
+                        Type = "OrphanedWebpartZone",
+                        Description = $"Could not find parent for zone {zone.ZoneID} among all the layout webparts ({allLayoutWebparts.Select(x => x.ControlID).Join(", ")})."
                     });
                     continue;
                 }
 
-                if (!parentControlIDToPortalWidgetSections.ContainsKey(parentControlIDlookup))
+                // Add to the found zone list
+                documentZonesFound.Add(findSectionEventArgs.ChildZone.ZoneID.ToLower());
+
+                string parentControlID = findSectionEventArgs.ParentLayoutWebpart.ControlID.ToLowerInvariant();
+                if (!parentControlIDToPortalWidgetSections.ContainsKey(parentControlID))
                 {
-                    parentControlIDToPortalWidgetSections.Add(parentControlIDlookup, new List<PortalWidgetSection>()
+                    parentControlIDToPortalWidgetSections.Add(parentControlID, new List<PortalWidgetSection>()
                     {
                         new PortalWidgetSection()
                         {
-                            SectionWidget = sectionWebpart,
+                            SectionWidget = findSectionEventArgs.ParentLayoutWebpart,
                             IsDefault = false,
                             SectionZoneToWidgets = new List<List<PortalWidget>>()
                         }
                     });
                 }
-                var section = parentControlIDToPortalWidgetSections[parentControlIDlookup][0];
+                var section = parentControlIDToPortalWidgetSections[parentControlID][0];
                 // Add zone to the section
-                section.SectionZoneToWidgets.Add(zone.WebParts.SelectMany(x => GetBasicWidgetToPortalWidgets(x, editableWebParts)).ToList());
+                section.SectionZoneToWidgets.Add(zone.WebParts.SelectMany(x => GetBasicWidgetToPortalWidgets(eventArgs, x, editableWebParts)).ToList());
+
             }
 
             // Next, loop through zones found in the parentControlIDToPortalWidget
@@ -868,21 +1053,44 @@ namespace KX12To13Converter.Base.Classes.PortalEngineToPageBuilder
                 // Get any Webpart Zones that contain these controls and not part of the template zones (AKA are a widget generated zone)
                 foreach (var widgetGeneratedZone in pageTemplateInstance.WebPartZones.Where(x => !allTemplateZoneIds.Contains(x.ZoneID, StringComparer.OrdinalIgnoreCase) && x.WebParts.Any(wp => controlIdsToCheck.Contains(wp.ControlID.ToLowerInvariant()))))
                 {
-                    var parentControlIdLookup = widgetGeneratedZone.ZoneID.Split('_').Take(widgetGeneratedZone.ZoneID.Split('_').Length - 1).Join("_").ToLowerInvariant();
-                    var parentControl = allLayoutWebparts.Where(x => x.ControlID.Equals(parentControlIdLookup, StringComparison.OrdinalIgnoreCase)).FirstOrDefault();
-                    if (parentControl == null)
+
+                    string parentControlIdLookup = string.Empty;
+                    PortalToMVCBuildPageFindSectionWebpartEventArgs findSectionEventArgs = new PortalToMVCBuildPageFindSectionWebpartEventArgs(widgetGeneratedZone, allLayoutWebparts)
+                    {
+                        ParentLayoutWebpart = null
+                    };
+
+                    // ProcessPage.Before
+                    using (var findParentSectionWebpart = PortalToMVCEvents.FindParentSectionWebpart.StartEvent(findSectionEventArgs))
+                    {
+                        if (!findSectionEventArgs.Handled)
+                        {
+                            // Go by parent control next
+                            var zoneArray = widgetGeneratedZone.ZoneID.Split('_');
+                            parentControlIdLookup = zoneArray.Take(zoneArray.Length - 1).Join("_").ToLowerInvariant();
+                            var sectionWebpart = allLayoutWebparts.Where(x => x.ControlID.Equals(parentControlIdLookup, StringComparison.OrdinalIgnoreCase)).FirstOrDefault();
+                            findSectionEventArgs.ParentLayoutWebpart = sectionWebpart;
+                        }
+
+                        // ProcessPage.After
+                        findParentSectionWebpart.FinishEvent();
+                    }
+
+                    if (findSectionEventArgs.ParentLayoutWebpart == null)
                     {
                         // orphan
                         eventArgs.ConversionNotes.Add(new ConversionNote()
                         {
                             IsError = false,
                             Source = "BuildPortalToMVCProcessDocumentPrimaryEventArgs",
-                            Type = "OrphanedSectionWebpart",
+                            Type = "OrphanedWebpartZone",
                             Description = $"Could not find parent for zone {widgetGeneratedZone.ZoneID} (lookup {parentControlIdLookup}) among all the layout webparts ({allLayoutWebparts.Select(x => x.ControlID).Join(", ")})."
                         });
                         continue;
                     }
 
+                    var parentControl = findSectionEventArgs.ParentLayoutWebpart;
+                    
                     // Skip this if there are any layout webparts that aren't in the controlIdsToCheck, must do bottom level first only
                     if (widgetGeneratedZone.WebParts.Any(wp =>
                         allLayoutWebPartControlIDs.Contains(wp.ControlID.ToLowerInvariant())
@@ -891,6 +1099,9 @@ namespace KX12To13Converter.Base.Classes.PortalEngineToPageBuilder
                     {
                         continue;
                     }
+
+                    // This item was found so add it to the found items.
+                    documentZonesFound.Add(findSectionEventArgs.ChildZone.ZoneID.ToLower());
 
                     // At this point is the 'next level'
                     nextLevelFound = true;
@@ -936,7 +1147,7 @@ namespace KX12To13Converter.Base.Classes.PortalEngineToPageBuilder
                         else
                         {
                             // Add the widget to the grouping
-                            var widgets = GetBasicWidgetToPortalWidgets(webpart, editableWebParts);
+                            var widgets = GetBasicWidgetToPortalWidgets(eventArgs, webpart, editableWebParts);
                             widgets.ForEach(x => x.AdditionalAncestorZones.Add(parentControl));
                             groupedWidgetSection.SectionZoneToWidgets.Add(widgets);
                         }
@@ -961,24 +1172,16 @@ namespace KX12To13Converter.Base.Classes.PortalEngineToPageBuilder
                     SectionZoneToWidgets = new List<List<PortalWidget>>() { new List<PortalWidget>() }
                 };
 
-                if (webpartZone == null)
+                // Only processes if webpart zone found in page
+                if (webpartZone != null)
                 {
-                    eventArgs.ConversionNotes.Add(new ConversionNote()
-                    {
-                        IsError = true,
-                        Source = "BuildPortalToMVCProcessDocumentPrimaryEventArgs",
-                        Type = "WebpartZoneNotFound",
-                        Description = $"Could not find the webpart zone {lookup} in the page template {(pageTemplateInstance.ParentPageTemplate?.DisplayName ?? "[No template]")}"
-                    });
-                }
-                else
-                {
+                    documentZonesFound.Add(lookup);
                     foreach (var widget in webpartZone.WebParts)
                     {
                         var widgetLookup = widget.ControlID.ToLowerInvariant();
                         if (!parentControlIDToPortalWidgetSections.ContainsKey(widgetLookup))
                         {
-                            groupedWidgetSection.SectionZoneToWidgets[0].AddRange(GetBasicWidgetToPortalWidgets(widget, editableWebParts));
+                            groupedWidgetSection.SectionZoneToWidgets[0].AddRange(GetBasicWidgetToPortalWidgets(eventArgs, widget, editableWebParts));
                         }
                         else
                         {
@@ -1002,6 +1205,18 @@ namespace KX12To13Converter.Base.Classes.PortalEngineToPageBuilder
                 {
                     templateZone.WidgetSections.Add(groupedWidgetSection);
                 }
+            }
+
+            var orphanedPageZones = pageTemplateInstance.WebPartZones.Select(x => x.ZoneID.ToLower()).Except(documentZonesFound).ToList();
+            if (orphanedPageZones.Any())
+            {
+                eventArgs.ConversionNotes.Add(new ConversionNote()
+                {
+                    IsError = false,
+                    Source = "BuildPortalToMVCProcessDocumentPrimaryEventArgs",
+                    Type = "OrphanedWebpartZones",
+                    Description = $"Could not find the following webpart zones [{orphanedPageZones.Join(", ")}] among all the layout webparts ({allLayoutWebparts.Select(x => x.ControlID).Join(", ")})."
+                });
             }
 
             return eventArgs;
@@ -1032,17 +1247,17 @@ namespace KX12To13Converter.Base.Classes.PortalEngineToPageBuilder
             var peZoneID = GetPEZoneID(peZoneEditableArea);
             var zoneConfiguration = templateConfig?.Zones.Where(x => x.PE_WebpartZoneName.Equals(peZoneID, StringComparison.OrdinalIgnoreCase)).FirstOrDefault();
 
-            return zoneConfiguration != null ? zoneConfiguration.PB_EditableAreaName.Replace("INHERIT", zoneConfiguration.PE_WebpartZoneName) : peZoneID;
+            return zoneConfiguration != null ? zoneConfiguration.PB_EditableAreaName.Replace("INHERIT", zoneConfiguration.PE_WebpartZoneName) : (IgnoreIfMissingInConfig ? String.Empty : peZoneID);
         }
 
-        private List<PortalWidget> GetBasicWidgetToPortalWidgets(WebPartInstance widget, MultiKeyDictionary<string> editableWebParts)
+        private List<PortalWidget> GetBasicWidgetToPortalWidgets(PortalToMVCProcessDocumentPrimaryEventArgs eventArgs, WebPartInstance widget, MultiKeyDictionary<string> editableWebParts)
         {
             List<PortalWidget> widgets = new List<PortalWidget>();
             var configuration = WidgetTypeToConfiguration.ContainsKey(widget.WebPartType.ToLowerInvariant()) ? WidgetTypeToConfiguration[widget.WebPartType.ToLowerInvariant()] : null;
 
             if (configuration == null || !configuration.PE_Widget.KeyValues.Any(x => x.CanContainInlineWidgets))
             {
-                widgets.Add(GetBasicWidgetToPortalWidget(widget, editableWebParts));
+                widgets.Add(GetBasicWidgetToPortalWidget(eventArgs, widget, editableWebParts));
                 return widgets;
             }
 
@@ -1052,16 +1267,16 @@ namespace KX12To13Converter.Base.Classes.PortalEngineToPageBuilder
             var value = widget.GetValue(propertyWithInlineWidget.Key);
             if (value == null || !value.ToString().Contains("{^"))
             {
-                widgets.Add(GetBasicWidgetToPortalWidget(widget, editableWebParts));
+                widgets.Add(GetBasicWidgetToPortalWidget(eventArgs, widget, editableWebParts));
                 return widgets;
             }
-            widgets.AddRange(ConvertInlinedContentToPortalWidgets(widget, propertyWithInlineWidget, value.ToString(), editableWebParts));
+            widgets.AddRange(ConvertInlinedContentToPortalWidgets(eventArgs, widget, propertyWithInlineWidget, value.ToString(), editableWebParts));
 
 
             return widgets;
         }
 
-        private List<PortalWidget> ConvertInlinedContentToPortalWidgets(WebPartInstance widget, InKeyValueOutKeyValues conversionKey, string contentWithInlineWidgets, MultiKeyDictionary<string> editableWebParts)
+        private List<PortalWidget> ConvertInlinedContentToPortalWidgets(PortalToMVCProcessDocumentPrimaryEventArgs eventArgs, WebPartInstance widget, InKeyValueOutKeyValues conversionKey, string contentWithInlineWidgets, MultiKeyDictionary<string> editableWebParts)
         {
             List<PortalWidget> widgets = new List<PortalWidget>();
             // At this point we need to split.
@@ -1092,7 +1307,21 @@ namespace KX12To13Converter.Base.Classes.PortalEngineToPageBuilder
 
                     int inlineWidgetEndIndex = strValue.IndexOf("^}") + 2;
                     string inlineWidgetVal = strValue.Substring(0, inlineWidgetEndIndex);
-                    inlineWidgetPortions.Add(GetInlineWidgetPortion(widget, inlineWidgetVal));
+                    var inlineWidget = GetInlineWidgetPortion(eventArgs, widget, inlineWidgetVal);
+                    if (inlineWidget != null)
+                    {
+                        inlineWidgetPortions.Add(inlineWidget);
+                    }
+                    else
+                    {
+                        eventArgs.ConversionNotes.Add(new ConversionNote()
+                        {
+                            IsError = false,
+                            Source = "ConvertInlineContentToPortalWidget",
+                            Type = "InlineWidgetNameNotFound",
+                            Description = $"Could not parse widget name from expression {inlineWidgetVal}"
+                        });
+                    }
                     strValue = strValue.Substring(inlineWidgetEndIndex);
                 }
             }
@@ -1108,7 +1337,7 @@ namespace KX12To13Converter.Base.Classes.PortalEngineToPageBuilder
             {
                 // Remove inline widgets and return
                 widget.SetValue(conversionKey.Key, inlineWidgetPortions.Where(x => !x.IsInlineWidget).Select(x => x.Value).Join(""));
-                widgets.Add(GetBasicWidgetToPortalWidget(widget, editableWebParts));
+                widgets.Add(GetBasicWidgetToPortalWidget(eventArgs, widget, editableWebParts));
                 return widgets;
             }
 
@@ -1121,7 +1350,7 @@ namespace KX12To13Converter.Base.Classes.PortalEngineToPageBuilder
                 // Only Inline widgets and whitespace, remove rest
                 foreach (var inlineWidget in inlineWidgetPortions.Where(x => x.IsInlineWidget))
                 {
-                    widgets.Add(GetBasicWidgetToPortalWidget(inlineWidget.WidgetInstance, editableWebParts));
+                    widgets.Add(GetBasicWidgetToPortalWidget(eventArgs, inlineWidget.WidgetInstance, editableWebParts));
                 };
                 return widgets;
             }
@@ -1150,7 +1379,7 @@ namespace KX12To13Converter.Base.Classes.PortalEngineToPageBuilder
                         inlineInstance = inlineWidgetPortion.WidgetInstance;
                     }
                 }
-                var newWidget = GetBasicWidgetToPortalWidget(inlineInstance, editableWebParts);
+                var newWidget = GetBasicWidgetToPortalWidget(eventArgs, inlineInstance, editableWebParts);
                 newWidget.HtmlBefore = htmlBefore;
                 newWidget.HtmlAfter = htmlAfter;
                 widgets.Add(newWidget);
@@ -1162,14 +1391,14 @@ namespace KX12To13Converter.Base.Classes.PortalEngineToPageBuilder
                 {
                     if (inlineWidgetPortion.IsInlineWidget)
                     {
-                        widgets.Add(GetBasicWidgetToPortalWidget(inlineWidgetPortion.WidgetInstance, editableWebParts));
+                        widgets.Add(GetBasicWidgetToPortalWidget(eventArgs, inlineWidgetPortion.WidgetInstance, editableWebParts));
                     }
                     else
                     {
                         widgets.Add(new PortalWidget()
                         {
                             WidgetType = WebpartType.Webpart,
-                            Widget = GetStaticTextWidgetInstance(widget, inlineWidgetPortion.Value),
+                            Widget = GetStaticTextWidgetInstance(eventArgs, widget, inlineWidgetPortion.Value),
                         });
                     }
                 }
@@ -1179,7 +1408,7 @@ namespace KX12To13Converter.Base.Classes.PortalEngineToPageBuilder
                 // ADD After as default
                 widget.SetValue(conversionKey.Key, inlineWidgetPortions.Where(x => !x.IsInlineWidget).Select(x => x.Value).Join(""));
 
-                var portalWidget = GetBasicWidgetToPortalWidget(widget, editableWebParts);
+                var portalWidget = GetBasicWidgetToPortalWidget(eventArgs, widget, editableWebParts);
                 // If it's an editable text type, then put in adjusted content
                 if (!string.IsNullOrWhiteSpace(portalWidget.EditableText))
                 {
@@ -1189,7 +1418,7 @@ namespace KX12To13Converter.Base.Classes.PortalEngineToPageBuilder
 
                 foreach (var inlineWidgetPortion in inlineWidgetPortions.Where(x => x.IsInlineWidget))
                 {
-                    widgets.Add(GetBasicWidgetToPortalWidget(inlineWidgetPortion.WidgetInstance, editableWebParts));
+                    widgets.Add(GetBasicWidgetToPortalWidget(eventArgs, inlineWidgetPortion.WidgetInstance, editableWebParts));
                 }
             }
             return widgets;
@@ -1201,7 +1430,7 @@ namespace KX12To13Converter.Base.Classes.PortalEngineToPageBuilder
             return configuration?.PE_Widget.IncludeHtmlBeforeAfter ?? false;
         }
 
-        private InlineWidgetPortion GetInlineWidgetPortion(WebPartInstance originWidgetInstance, string inlineWidgetVal)
+        private InlineWidgetPortion GetInlineWidgetPortion(PortalToMVCProcessDocumentPrimaryEventArgs eventArgs, WebPartInstance originWidgetInstance, string inlineWidgetVal)
         {
             var inlineWidgetRegex = RegexHelper.GetRegex("(?:(?<type>%%control:)(?<macro>(?:[^%]|%[^%])+)%%)|(?:\\{(?<index>(?:\\([0-9]+\\))?)(?<type>\\^)(?<macro>(?:(?:(?!\\k<type>).)|(?:\\k<type>(?!\\k<index>\\})))*)(?:\\k<type>)(?:\\k<index>)(?:\\}))");
             var m = inlineWidgetRegex.Matches(inlineWidgetVal)[0];
@@ -1229,7 +1458,14 @@ namespace KX12To13Converter.Base.Classes.PortalEngineToPageBuilder
                 // Parse inline parameters
                 parameters = ParseInlineParameters(expression, ref controlParameter, ref controlName);
             }
-            var webpartName = parameters["name"].ToString();
+
+            // Could not find a name to the inline widget, ignore.
+            if (!parameters.ContainsKey("name") && string.IsNullOrWhiteSpace(controlName))
+            {
+                return null;
+            }
+
+            var webpartName = !string.IsNullOrWhiteSpace(controlName) ? controlName : parameters["name"].ToString();
 
             var inlineInstance = new WebPartInstance()
             {
@@ -1323,7 +1559,7 @@ namespace KX12To13Converter.Base.Classes.PortalEngineToPageBuilder
             return null;
         }
 
-        private WebPartInstance GetStaticTextWidgetInstance(WebPartInstance originWidgetInstance, string value)
+        private WebPartInstance GetStaticTextWidgetInstance(PortalToMVCProcessDocumentPrimaryEventArgs eventArgs, WebPartInstance originWidgetInstance, string value)
         {
 
             var splitConfiguration = WidgetTypeToConfiguration.ContainsKey("statictextwidget") ? WidgetTypeToConfiguration["statictextwidget"] : null;
@@ -1362,7 +1598,7 @@ namespace KX12To13Converter.Base.Classes.PortalEngineToPageBuilder
             return htmlCode;
         }
 
-        private PortalWidget GetBasicWidgetToPortalWidget(WebPartInstance widget, MultiKeyDictionary<string> editableWebParts)
+        private PortalWidget GetBasicWidgetToPortalWidget(PortalToMVCProcessDocumentPrimaryEventArgs eventArgs, WebPartInstance widget, MultiKeyDictionary<string> editableWebParts)
         {
             if (!editableWebParts.ContainsKey(widget.ControlID.ToLowerInvariant()))
             {
@@ -1393,7 +1629,7 @@ namespace KX12To13Converter.Base.Classes.PortalEngineToPageBuilder
         /// <param name="editableTextInstance"></param>
         /// <param name="editableTextContent"></param>
         /// <returns></returns>
-        private List<PortalWidget> GetEditableTextPartWidgets(WebPartInstance editableTextInstance, string editableTextContent, MultiKeyDictionary<string> editableWebParts)
+        private List<PortalWidget> GetEditableTextPartWidgets(PortalToMVCProcessDocumentPrimaryEventArgs eventArgs, WebPartInstance editableTextInstance, string editableTextContent, MultiKeyDictionary<string> editableWebParts)
         {
             List<PortalWidget> widgets = new List<PortalWidget>();
             var configuration = WidgetTypeToConfiguration.ContainsKey(editableTextInstance.WebPartType.ToLower()) ? WidgetTypeToConfiguration[editableTextInstance.WebPartType.ToLowerInvariant()] : null;
@@ -1410,7 +1646,7 @@ namespace KX12To13Converter.Base.Classes.PortalEngineToPageBuilder
             }
             else
             {
-                widgets.AddRange(ConvertInlinedContentToPortalWidgets(editableTextInstance, inlineConfig, editableTextContent, editableWebParts));
+                widgets.AddRange(ConvertInlinedContentToPortalWidgets(eventArgs, editableTextInstance, inlineConfig, editableTextContent, editableWebParts));
             }
             return widgets;
         }

@@ -268,8 +268,8 @@
     <Reference Include="GlobalLink.Connect, Version=4.18.2.0, Culture=neutral, PublicKeyToken=946d606070618fd4, processorArchitecture=MSIL">
       <HintPath>..\..\..\Kentico12_PortalFullHotfix\packages\GlobalLink.Connect.4.18.3.1\lib\net46\GlobalLink.Connect.dll</HintPath>
     </Reference>
-    <Reference Include="KX12To13Converter.Shared, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\..\..\Kentico12_PortalFullHotfix\packages\KX12To13Converter.Shared.12.29.0\lib\net461\KX12To13Converter.Shared.dll</HintPath>
+    <Reference Include="KX12To13Converter.Shared, Version=12.29.12.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\..\..\Kentico12_PortalFullHotfix\packages\KX12To13Converter.Shared.12.29.12\lib\net461\KX12To13Converter.Shared.dll</HintPath>
     </Reference>
     <Reference Include="LinqToTwitter.net, Version=4.0.0.0, Culture=neutral, PublicKeyToken=957107be965c25d9, processorArchitecture=MSIL">
       <HintPath>..\..\..\Kentico12_PortalFullHotfix\packages\linqtotwitter.4.0.0\lib\net45\LinqToTwitter.net.dll</HintPath>
@@ -437,6 +437,8 @@
     </Reference>
     <Reference Include="System.IO.FileSystem.Primitives, Version=4.0.1.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
       <HintPath>..\..\..\Kentico12_PortalFullHotfix\packages\System.IO.FileSystem.Primitives.4.0.1\lib\net46\System.IO.FileSystem.Primitives.dll</HintPath>
+      <Private>True</Private>
+      <Private>True</Private>
     </Reference>
     <Reference Include="System.IO.Packaging, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
       <HintPath>..\..\..\Kentico12_PortalFullHotfix\packages\System.IO.Packaging.4.0.0\lib\net46\System.IO.Packaging.dll</HintPath>
@@ -473,6 +475,8 @@
     </Reference>
     <Reference Include="System.ValueTuple, Version=4.0.2.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
       <HintPath>..\..\..\Kentico12_PortalFullHotfix\packages\System.ValueTuple.4.4.0\lib\net461\System.ValueTuple.dll</HintPath>
+      <Private>True</Private>
+      <Private>True</Private>
     </Reference>
     <Reference Include="System.Web" />
     <Reference Include="System.Xml.Linq" />

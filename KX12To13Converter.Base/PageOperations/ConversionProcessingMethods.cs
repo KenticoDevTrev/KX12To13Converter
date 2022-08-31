@@ -23,6 +23,26 @@ namespace KX12To13Converter.Base.PageOperations
 {
     public class ConversionProcessingMethods : IConversionProcessingMethods
     {
+        #region "Handling"
+
+        public bool HandleProcessOnly(TreeNode document, PortalToMVCProcessDocumentPrimaryEventArgs results)
+        {
+            KX12To13Queues.GenerateConversionInfo(document, results, false);
+            return true;
+        }
+
+        /// <summary>
+        /// Saves the conversion results to a PageBuilderConversionsInfo object and attempts to push right away
+        /// </summary>
+        /// <param name="document"></param>
+        /// <param name="results"></param>
+        /// <returns></returns>
+        public bool HandleProcessAndSendDocument(TreeNode document, PortalToMVCProcessDocumentPrimaryEventArgs results)
+        {
+            var pageBuilderConversionsInfo = KX12To13Queues.GenerateConversionInfo(document, results, true);
+            return SendDocument(document, pageBuilderConversionsInfo);
+        }
+
         /// <summary>
         /// Takes the results and saves it to the DocumentPageTemplateConversion and DocumentPageBuilderWidgets
         /// </summary>
@@ -31,60 +51,69 @@ namespace KX12To13Converter.Base.PageOperations
         /// <returns></returns>
         public bool HandleProcessAndSaveDocument(TreeNode document, PortalToMVCProcessDocumentPrimaryEventArgs results)
         {
-            // Creates an instance of the Tree provider
-            try
-            {
-                TreeProvider tree = new TreeProvider(MembershipContext.AuthenticatedUser);
-                WorkflowManager workflowManager = WorkflowManager.GetInstance(tree);
-                WorkflowInfo workflow = workflowManager.GetNodeWorkflow(document);
+            // Generate it
+            var conversionItem = KX12To13Queues.GenerateConversionInfo(document, results, false);
 
-                bool wasCheckedOut = document.IsCheckedOut;
-                bool isPublished = document.IsPublished;
-                if (!document.DocumentCheckedOutAutomatically && !wasCheckedOut)
-                {
-                    document.CheckOut();
-                }
-                document.SetValue("DocumentPageTemplateConfiguration", JsonConvert.SerializeObject(results.PageBuilderData.TemplateConfiguration, Formatting.None));
-                document.SetValue("DocumentPageBuilderWidgets", JsonConvert.SerializeObject(results.PageBuilderData.ZoneConfiguration, Formatting.None));
+            SaveDocument(document, conversionItem);
 
-                document.Update();
-
-                if (!document.DocumentCheckedOutAutomatically && !wasCheckedOut)
-                {
-                    document.CheckIn();
-                }
-                if (workflow != null && isPublished)
-                {
-                    document.Publish("Published with Converted Page Builder values");
-                }
-
-                results.ConversionNotes.Add(new ConversionNote()
-                {
-                    IsError = false,
-                    Source = "HandleProcessAndSaveDocument",
-                    Type = "SaveDocumentSuccess"
-                });
-                KX12To13Queues.GenerateConversionInfo(document, results, false);
-            }
-            catch (Exception ex)
-            {
-                results.ConversionNotes.Add(new ConversionNote()
-                {
-                    IsError = true,
-                    Source = "HandleProcessAndSaveDocument",
-                    Type = "SaveDocumentError",
-                    Description = $"Error updating document: {ex.Message}."
-                });
-                // Flag as failed
-                results.CancelOperation = true;
-                KX12To13Queues.GenerateConversionInfo(document, results, false);
-            }
             return true;
         }
 
+
+        #endregion
+
+        #region "Processing"
+
+        public bool ReProcesses(PageBuilderConversionsInfo pageBuilderConversionsInfo)
+        {
+            var document = DocumentHelper.GetDocuments().WhereEquals(nameof(TreeNode.DocumentID), pageBuilderConversionsInfo.PageBuilderConversionDocumentID)
+                .Published(true)
+                .LatestVersion(false)
+                .CombineWithAnyCulture(true)
+                .FirstOrDefault();
+            if (document == null)
+            {
+                return false;
+            }
+            int siteID = document.NodeSiteID;
+            IPortalEngineToMVCConverter converter = CacheHelper.Cache(cs =>
+            {
+                IPortalEngineToMVCConverterRetriever portalEngineToMVCConverterRetriever = Service.Resolve<IPortalEngineToMVCConverterRetriever>();
+                if (cs.Cached)
+                {
+                    cs.CacheDependency = CacheHelper.GetCacheDependency(new string[]
+                    {
+                                $"{SettingsKeyInfo.OBJECT_TYPE}|all"
+                    });
+                }
+                var templateConfiguration = JsonConvert.DeserializeObject<List<TemplateConfiguration>>(SettingsKeyInfoProvider.GetValue("ConverterTemplateConfigJson", siteID));
+                var sectionConfiguration = JsonConvert.DeserializeObject<List<ConverterSectionConfiguration>>(SettingsKeyInfoProvider.GetValue("ConverterSectionConfigJson", siteID));
+                var defaultSectionConfiguration = JsonConvert.DeserializeObject<PageBuilderSection>(SettingsKeyInfoProvider.GetValue("ConverterDefaultSectionConfigJson", siteID));
+                var widgetConfiguration = JsonConvert.DeserializeObject<List<ConverterWidgetConfiguration>>(SettingsKeyInfoProvider.GetValue("ConverterWidgetConfigJson", siteID));
+                return portalEngineToMVCConverterRetriever.GetConverter(templateConfiguration, sectionConfiguration, defaultSectionConfiguration, widgetConfiguration);
+            }, new CacheSettings(30, "GetConverter", siteID));
+            var results = converter.ProcessDocument(document);
+
+            // Update results
+            pageBuilderConversionsInfo.PageBuilderConversionDateProcessed = DateTime.Now;
+            pageBuilderConversionsInfo.PageBuilderConversionMarkForConversion = false;
+            pageBuilderConversionsInfo.PageBuilderConversionPageBuilderJSON = JsonConvert.SerializeObject(results.PageBuilderData.ZoneConfiguration, Formatting.None);
+            pageBuilderConversionsInfo.PageBuilderConversionTemplateJSON = JsonConvert.SerializeObject(results.PageBuilderData.TemplateConfiguration, Formatting.None);
+            pageBuilderConversionsInfo.PageBuilderConversionSuccessful = !results.CancelOperation;
+            pageBuilderConversionsInfo.PageBuilderConversionNotes = JsonConvert.SerializeObject(results.ConversionNotes, Formatting.Indented);
+
+            PageBuilderConversionsInfoProvider.SetPageBuilderConversionsInfo(pageBuilderConversionsInfo);
+
+            return !results.CancelOperation;
+        }
+
+
+        #endregion
+
+        #region "Send"
         public bool SendDocument(PageBuilderConversionsInfo pageBuilderConversionsInfo)
         {
-            var document = DocumentHelper.GetDocuments().WhereEquals(nameof(TreeNode.DocumentID), pageBuilderConversionsInfo.PageBuilderConversionDocumentID).Published(true).LatestVersion(false).FirstOrDefault();
+            var document = DocumentHelper.GetDocuments().WhereEquals(nameof(TreeNode.DocumentID), pageBuilderConversionsInfo.PageBuilderConversionDocumentID).Published(true).LatestVersion(false).CombineWithAnyCulture(true).FirstOrDefault();
             if (document == null)
             {
                 return false;
@@ -99,9 +128,9 @@ namespace KX12To13Converter.Base.PageOperations
         /// <param name="pageBuilderConversionsInfo"></param>
         /// <returns></returns>
         /// <exception cref="Exception"></exception>
-        public bool SendDocument(TreeNode document, PageBuilderConversionsInfo pageBuilderConversionsInfo)
+        private bool SendDocument(TreeNode document, PageBuilderConversionsInfo pageBuilderConversionsInfo)
         {
-            
+
             string url = SettingsKeyInfoProvider.GetValue("ConverterReceiverBaseUrl", SiteContext.CurrentSiteID) + "/kx12to13api/updatedoc";
             string hashValue = SettingsKeyInfoProvider.GetValue("ConverterHashCode", SiteContext.CurrentSiteID);
             List<ConversionNote> conversionNotes = !string.IsNullOrWhiteSpace(pageBuilderConversionsInfo.PageBuilderConversionNotes) ? JsonConvert.DeserializeObject<List<ConversionNote>>(pageBuilderConversionsInfo.PageBuilderConversionNotes) : new List<ConversionNote>();
@@ -224,7 +253,8 @@ namespace KX12To13Converter.Base.PageOperations
                 pageBuilderConversionsInfo.PageBuilderConversionNotes = JsonConvert.SerializeObject(conversionNotes, Formatting.Indented);
                 PageBuilderConversionsInfoProvider.SetPageBuilderConversionsInfo(pageBuilderConversionsInfo);
                 return false;
-            } catch(Exception ex)
+            }
+            catch (Exception ex)
             {
                 // Log error
                 conversionNotes.Add(new ConversionNote()
@@ -240,6 +270,68 @@ namespace KX12To13Converter.Base.PageOperations
                 return false;
             }
         }
+
+        #endregion
+
+        #region "Save"
+
+        public bool SaveDocument(PageBuilderConversionsInfo pageBuilderConversionsInfo)
+        {
+            var document = DocumentHelper.GetDocuments().WhereEquals(nameof(TreeNode.DocumentID), pageBuilderConversionsInfo.PageBuilderConversionDocumentID).Published(true).LatestVersion(false).CombineWithAnyCulture(true).FirstOrDefault();
+            if (document == null)
+            {
+                return false;
+            }
+            return SaveDocument(document, pageBuilderConversionsInfo);
+        }
+
+        private bool SaveDocument(TreeNode document, PageBuilderConversionsInfo pageBuilderConversionsInfo)
+        {
+            List<ConversionNote> conversionNotes = !string.IsNullOrWhiteSpace(pageBuilderConversionsInfo.PageBuilderConversionNotes) ? JsonConvert.DeserializeObject<List<ConversionNote>>(pageBuilderConversionsInfo.PageBuilderConversionNotes) : new List<ConversionNote>();
+            // Creates an instance of the Tree provider
+            try
+            {
+                TreeProvider tree = new TreeProvider(MembershipContext.AuthenticatedUser);
+                WorkflowManager workflowManager = WorkflowManager.GetInstance(tree);
+                WorkflowInfo workflow = workflowManager.GetNodeWorkflow(document);
+
+                bool wasCheckedOut = document.IsCheckedOut;
+                bool isPublished = document.IsPublished;
+                if (!document.DocumentCheckedOutAutomatically && !wasCheckedOut)
+                {
+                    document.CheckOut();
+                }
+                document.SetValue("DocumentPageTemplateConfiguration", pageBuilderConversionsInfo.PageBuilderConversionTemplateJSON);
+                document.SetValue("DocumentPageBuilderWidgets", pageBuilderConversionsInfo.PageBuilderConversionPageBuilderJSON);
+
+                document.Update();
+
+                if (!document.DocumentCheckedOutAutomatically && !wasCheckedOut)
+                {
+                    document.CheckIn();
+                }
+                if (workflow != null && isPublished)
+                {
+                    document.Publish("Published with Converted Page Builder values");
+                }
+            }
+            catch (Exception ex)
+            {
+                conversionNotes.Add(new ConversionNote()
+                {
+                    IsError = true,
+                    Source = "HandleProcessAndSaveDocument",
+                    Type = "SaveDocumentError",
+                    Description = $"Error updating document: {ex.Message}."
+                });
+                pageBuilderConversionsInfo.PageBuilderConversionNotes = JsonConvert.SerializeObject(conversionNotes, Formatting.Indented);
+                PageBuilderConversionsInfoProvider.SetPageBuilderConversionsInfo(pageBuilderConversionsInfo);
+                return false;
+            }
+            return true;
+        }
+
+        #endregion
 
         public static string GetNoonce(KX12To13ConversionRequest request, string privateToken)
         {
@@ -260,65 +352,8 @@ namespace KX12To13Converter.Base.PageOperations
             }
         }
 
-        /// <summary>
-        /// Saves the conversion results to a PageBuilderConversionsInfo object and attempts to push right away
-        /// </summary>
-        /// <param name="document"></param>
-        /// <param name="results"></param>
-        /// <returns></returns>
-        public bool HandleProcessAndSendDocument(TreeNode document, PortalToMVCProcessDocumentPrimaryEventArgs results)
-        {
-            var pageBuilderConversionsInfo = KX12To13Queues.GenerateConversionInfo(document, results, true);
-            return SendDocument(document, pageBuilderConversionsInfo);
-        }
+        
 
-        public bool HandleProcessOnly(TreeNode document, PortalToMVCProcessDocumentPrimaryEventArgs results)
-        {
-            KX12To13Queues.GenerateConversionInfo(document, results, false);
-            return true;
-        }
-
-        public bool ReProcesses(PageBuilderConversionsInfo pageBuilderConversionsInfo)
-        {
-            var document = DocumentHelper.GetDocuments().WhereEquals(nameof(TreeNode.DocumentID), pageBuilderConversionsInfo.PageBuilderConversionDocumentID)
-                .Published(true)
-                .LatestVersion(false)
-                .FirstOrDefault();
-            if (document == null)
-            {
-                return false;
-            }
-            int siteID = document.NodeSiteID;
-            IPortalEngineToMVCConverter converter = CacheHelper.Cache(cs =>
-            {
-                IPortalEngineToMVCConverterRetriever portalEngineToMVCConverterRetriever = Service.Resolve<IPortalEngineToMVCConverterRetriever>();
-                if (cs.Cached)
-                {
-                    cs.CacheDependency = CacheHelper.GetCacheDependency(new string[]
-                    {
-                                $"{SettingsKeyInfo.OBJECT_TYPE}|all"
-                    });
-                }
-                var templateConfiguration = JsonConvert.DeserializeObject<List<TemplateConfiguration>>(SettingsKeyInfoProvider.GetValue("ConverterTemplateConfigJson", siteID));
-                var sectionConfiguration = JsonConvert.DeserializeObject<List<ConverterSectionConfiguration>>(SettingsKeyInfoProvider.GetValue("ConverterSectionConfigJson", siteID));
-                var defaultSectionConfiguration = JsonConvert.DeserializeObject<PageBuilderSection>(SettingsKeyInfoProvider.GetValue("ConverterDefaultSectionConfigJson", siteID));
-                var widgetConfiguration = JsonConvert.DeserializeObject<List<ConverterWidgetConfiguration>>(SettingsKeyInfoProvider.GetValue("ConverterWidgetConfigJson", siteID));
-                return portalEngineToMVCConverterRetriever.GetConverter(templateConfiguration, sectionConfiguration, defaultSectionConfiguration, widgetConfiguration);
-            }, new CacheSettings(30, "GetConverter", siteID));
-            var results = converter.ProcessDocument(document);
-
-            // Update results
-            pageBuilderConversionsInfo.PageBuilderConversionDateProcessed = DateTime.Now;
-            pageBuilderConversionsInfo.PageBuilderConversionMarkForConversion = false;
-            pageBuilderConversionsInfo.PageBuilderConversionPageBuilderJSON = JsonConvert.SerializeObject(results.PageBuilderData.ZoneConfiguration, Formatting.None);
-            pageBuilderConversionsInfo.PageBuilderConversionTemplateJSON = JsonConvert.SerializeObject(results.PageBuilderData.TemplateConfiguration, Formatting.None);
-            pageBuilderConversionsInfo.PageBuilderConversionSuccessful = !results.CancelOperation;
-            pageBuilderConversionsInfo.PageBuilderConversionNotes = JsonConvert.SerializeObject(results.ConversionNotes, Formatting.Indented);
-
-            PageBuilderConversionsInfoProvider.SetPageBuilderConversionsInfo(pageBuilderConversionsInfo);
-
-            return !results.CancelOperation;
-        }
 
     }
 }

@@ -57,36 +57,25 @@ namespace KX12To13Converter.Pages.CMSModules.KX12To13Converter.UpgradeScripts
         protected void btnDeleteClasses_Click(object sender, EventArgs e)
         {
             var selected = cbxClasses.Items.Cast<ListItem>().Where(x => x.Selected);
+            var unselected = cbxClasses.Items.Cast<ListItem>().Where(x => !x.Selected);
             var classIds = selected.Select(x => ValidationHelper.GetInteger(x.Value, 0));
             PreUpgrade2RemoveClasses.DeleteClasses(classIds);
 
-            foreach (var selectedItem in selected)
-            {
-                try
-                {
-                    cbxClasses.Items.Remove(selectedItem);
-                }
-                catch { }
-            }
+            cbxClasses.Items.Clear();
+            cbxClasses.Items.AddRange(unselected.ToArray());
             ltrResult.Text = $"{selected.Count()} Classes Removed.";
         }
 
         protected void btnDeletePagesAndClasses_Click(object sender, EventArgs e)
         {
             var selected = cbxUsedClasses.Items.Cast<ListItem>().Where(x => x.Selected);
+            var unselected = cbxUsedClasses.Items.Cast<ListItem>().Where(x => !x.Selected);
             var classIds = selected.Select(x => ValidationHelper.GetInteger(x.Value, 0));
             // Delete all pages
             PreUpgrade2RemoveClasses.DeletePagesClasses(classIds);
 
-            // remove entries
-            try
-            {
-                foreach (var selectedItem in selected)
-                {
-                    cbxUsedClasses.Items.Remove(selectedItem);
-                }
-            }
-            catch { }
+            cbxClasses.Items.Clear();
+            cbxClasses.Items.AddRange(unselected.ToArray());
             ltrResult.Text = $"{selected.Count()} Classes Removed.";
         }
     }

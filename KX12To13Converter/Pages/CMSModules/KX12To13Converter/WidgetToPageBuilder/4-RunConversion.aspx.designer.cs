@@ -166,5 +166,11 @@ namespace KX12To13Converter.Pages.CMSModules.KX12To13Converter.WidgetToPageBuild
         /// To modify move field declaration from designer file to code-behind file.
         /// </remarks>
         protected global::System.Web.UI.WebControls.TextBox tbxJsonResultWidgets;
+
+        protected global::System.Web.UI.WebControls.Label lblSite;
+        protected global::System.Web.UI.WebControls.DropDownList ddlSite;
+
+        protected global::System.Web.UI.WebControls.Label lblPreviewCulture;
+        protected global::System.Web.UI.WebControls.TextBox tbxPreviewCulture;
     }
 }

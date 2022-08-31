@@ -11,7 +11,7 @@ namespace KX12To13Converter.Base.PageOperations
         public IEnumerable<DataClassInfo> GetPageBuidlerPageTypes()
         {
             return DataClassInfoProvider.GetClasses()
-                .Where("ClassName <> 'CMS.Root' and ClassIsDocumentType = 1 and COALESCE(ClassIsContentOnly, 0) = 0 and ClassIsCoupledClass = 1 and ClassUrlPattern is null")
+                .Where("ClassName <> 'CMS.Root' and ClassIsDocumentType = 1 and COALESCE(ClassIsContentOnly, 0) = 0 and ClassUrlPattern is null")
                 .OrderBy("ClassDisplayName")
                 .TypedResult;
         }
@@ -19,7 +19,7 @@ namespace KX12To13Converter.Base.PageOperations
         public IEnumerable<DataClassInfo> GetPageBuilderContentOnly()
         {
             return DataClassInfoProvider.GetClasses()
-                .Where("ClassName <> 'CMS.Root' and ClassIsDocumentType = 1 and ClassIsContentOnly = 1 and ClassIsCoupledClass = 1 and CLassUrlPattern is null")
+                .Where("ClassName <> 'CMS.Root' and ClassIsDocumentType = 1 and ClassIsContentOnly = 1 and CLassUrlPattern is null")
                 .OrderBy("ClassDisplayName")
                 .TypedResult;
         }

@@ -159,7 +159,7 @@ and DocumentworkflowstepID in (select distinct StepID from CMS_WorkflowStep wher
 
         public void DisableWorkflowAndClearHistory()
         {
-            foreach (var workflow in WorkflowInfoProvider.GetWorkflows().WhereEquals(nameof(WorkflowInfo.WorkflowEnabled), false).TypedResult)
+            foreach (var workflow in WorkflowInfoProvider.GetWorkflows().WhereEquals(nameof(WorkflowInfo.WorkflowEnabled), true).TypedResult)
             {
                 workflow.WorkflowEnabled = false;
                 WorkflowInfoProvider.SetWorkflowInfo(workflow);
@@ -169,7 +169,7 @@ and DocumentworkflowstepID in (select distinct StepID from CMS_WorkflowStep wher
             ConnectionHelper.ExecuteNonQuery(@"TRUNCATE TABLE CMS_WorkflowHistory", null, QueryTypeEnum.SQLQuery);
 
             // Remove Version History ref from Documents
-            ConnectionHelper.ExecuteNonQuery(@"UPDATE CMS_Document SET DocumentCheckedOutVersionHistoryID = NULL ,DocumentPublishedVersionHistoryID = NULL", null, QueryTypeEnum.SQLQuery);
+            ConnectionHelper.ExecuteNonQuery(@"UPDATE CMS_Document SET DocumentCheckedOutVersionHistoryID = NULL,DocumentPublishedVersionHistoryID = NULL, DocumentWorkflowStepID = null, DocumentLastVersionNumber = null", null, QueryTypeEnum.SQLQuery);
 
             // Clear History table and attachments
             ConnectionHelper.ExecuteNonQuery(@"TRUNCATE TABLE CMS_VersionAttachment", null, QueryTypeEnum.SQLQuery);

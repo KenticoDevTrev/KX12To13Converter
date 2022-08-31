@@ -29,7 +29,7 @@
     <DefineConstants>TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
-    <PlatformTarget>x86</PlatformTarget>
+    <PlatformTarget>AnyCPU</PlatformTarget>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="AngleSharp, Version=0.9.9.0, Culture=neutral, PublicKeyToken=e83494dcdc6d31ea, processorArchitecture=MSIL">
@@ -453,9 +453,11 @@
     <Compile Include="Classes\PageBuilderConversionInfo.cs" />
     <Compile Include="Classes\PageBuilderConversionInfoProvider.cs" />
     <Compile Include="Enums\CurrentDocumentType.cs" />
+    <Compile Include="Enums\CustomMessageType.cs" />
     <Compile Include="Enums\PreviousState.cs" />
     <Compile Include="Enums\VersionHistoryOperationType.cs" />
     <Compile Include="Interfaces\IConversionProcessingMethods.cs" />
+    <Compile Include="Interfaces\IPageBuilderUnigridExtensionMethods.cs" />
     <Compile Include="Interfaces\IPortalEngineToMVCConverter.cs" />
     <Compile Include="Interfaces\IPortalEngineToMVCConverterRetriever.cs" />
     <Compile Include="Interfaces\IPreUpgrade1VersioningWorkflow.cs" />
@@ -466,6 +468,7 @@
     <Compile Include="Interfaces\IRunConversionMethods.cs" />
     <Compile Include="Interfaces\ISectionConfigurationBuilderMethods.cs" />
     <Compile Include="Interfaces\IWidgetConfigurationBuilderMethods.cs" />
+    <Compile Include="PortalEngineToPageBuilder\EventArgs\PortalToMVCBuildPageFindSectionWebpartEventArgs.cs" />
     <Compile Include="PortalEngineToPageBuilder\SupportingConverterClasses\ConversionNote.cs" />
     <Compile Include="PortalEngineToPageBuilder\SupportingConverterClasses\InlineWidgetPortion.cs" />
     <Compile Include="PortalEngineToPageBuilder\SupportingConverterClasses\KenticoPageBuilderClasses.cs" />

@@ -28,17 +28,40 @@ namespace KX12To13Converter.Base.PageOperations
 
         private Dictionary<bool, IEnumerable<int>> GetIsInlineWidgetToWidgetIds()
         {
-            return ConnectionHelper.ExecuteQuery(@" select WidgetID, 0 as Inline from CMS_Widget
-left join CMS_WebPart on WebpartID = WidgetWebPartID
-where WidgetForEditor = 1 and WebPartType in(0,5,7) and exists (select 1 from View_CMS_Tree_Joined where DocumentWebParts like '%type=""'+WidgetName+'""%' and DocumentIsArchived = 0 and DocumentCanBePublished = 1 and COALESCE(DocumentPublishFrom, @minDate) < GETDATE() and COALESCE(DocumentPublishTo, @maxDate) > GETDATE())
-UNION ALL
- select WidgetID, 1 as Inline from CMS_Widget
-left join CMS_WebPart on WebpartID = WidgetWebPartID
-where WidgetForInline = 1 and WebPartType in (0, 5, 7) and exists(
-select 1 from View_CMS_Tree_Joined where CONCAT(COALESCE(DocumentContent, ''), COALESCE(DocumentWebParts, '')) like '%(name)' + WidgetName + '|%' and DocumentIsArchived = 0 and DocumentCanBePublished = 1 and COALESCE(DocumentPublishFrom, @minDate) < GETDATE() and COALESCE(DocumentPublishTo, @maxDate) > GETDATE())
-", new QueryDataParameters() { { "@minDate", DateTimeHelper.ZERO_TIME }, { "@maxDate", DateTime.MaxValue } }, QueryTypeEnum.SQLQuery).Tables[0].Rows.Cast<DataRow>()
-.Select(x => new Tuple<bool, int>(((int)x["Inline"] == 1), (int)x["WidgetID"]))
-.GroupBy(x => x.Item1).ToDictionary(key => key.Key, value => value.Select(x => x.Item2));
+            // Better performance by doing in c# land
+            var searchContent = ConnectionHelper.ExecuteQuery(@"select lower(coalesce(DocumentWebParts, '')+coalesce(DocumentContent, '')) as ValuesToScan from View_CMS_Tree_Joined where coalesce(nullif(DocumentWebParts, ''), nullif(documentcontent, '')) is not null and DocumentIsArchived = 0 and DocumentCanBePublished = 1 and COALESCE(DocumentPublishFrom, @minDate) < GETDATE() and COALESCE(DocumentPublishTo, @maxDate) > GETDATE()", new QueryDataParameters() { { "@minDate", DateTimeHelper.ZERO_TIME }, { "@maxDate", DateTime.MaxValue } }, QueryTypeEnum.SQLQuery).Tables[0].Rows.Cast<DataRow>().Select(x => (string)x["ValuesToScan"]);
+
+            var widgetNameToID = WidgetInfoProvider.GetWidgets()
+                .Source(x => x.LeftJoin<WebPartInfo>(nameof(WidgetInfo.WidgetWebPartID), nameof(WebPartInfo.WebPartID)))
+                .Where($"{nameof(WidgetInfo.WidgetForEditor)} = 1 or {nameof(WidgetInfo.WidgetForInline)} = 1")
+                .WhereIn("WebpartType", new int[] { 0, 4, 5, 7 })
+                .TypedResult
+                .ToDictionary(key => key.WidgetName.ToLower(), value => value.WidgetID);
+
+            List<int> widgetIds = new List<int>();
+            List<int> inlineWidgetIds = new List<int>();
+            foreach(string widgetName in widgetNameToID.Keys)
+            {
+                if(searchContent.Any(x => x.IndexOf($"type=\"{widgetName}\"") > -1))
+                {
+                    widgetIds.Add(widgetNameToID[widgetName]);
+                }
+                if(searchContent.Any(x => x.IndexOf($"(name){widgetName}") > -1))
+                {
+                    inlineWidgetIds.Add(widgetNameToID[widgetName]);
+                }
+                if (searchContent.Any(x => x.IndexOf($"{{^{widgetName}") > -1))
+                {
+                    inlineWidgetIds.Add(widgetNameToID[widgetName]);
+                }
+            }
+            return new Dictionary<bool, IEnumerable<int>>()
+            {
+                {
+                    true, inlineWidgetIds
+                },
+                { false, widgetIds }
+            };
         }
 
         public List<ConverterWidgetConfiguration> GetWidgetConfigurations(IEnumerable<int> includedWidgetIds, IEnumerable<int> excludedWidgetIds)

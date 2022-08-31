@@ -12,6 +12,8 @@ using System.Linq;
 using KX12To13Converter.PortalEngineToPageBuilder;
 using KX12To13Converter.Interfaces;
 using KX12To13Converter.PortalEngineToPageBuilder.EventArgs;
+using System.Web.UI.WebControls;
+using CMS.Localization;
 
 namespace KX12To13Converter.Pages.CMSModules.KX12To13Converter.WidgetToPageBuilder
 {
@@ -31,6 +33,13 @@ namespace KX12To13Converter.Pages.CMSModules.KX12To13Converter.WidgetToPageBuild
         protected override void OnInit(EventArgs e)
         {
             base.OnInit(e);
+
+            ddlSite.Items.Add(new ListItem("All Sites", "0"));
+            foreach (var site in SiteInfoProvider.GetSites().OrderBy("SiteDisplayName").TypedResult)
+            {
+                ddlSite.Items.Add(new ListItem(site.DisplayName, site.SiteID.ToString()));
+            }
+
             if (SessionHelper.GetValue("tbxTemplateConfigJson") != null)
             {
                 tbxTemplateConfigJson.Text = ValidationHelper.GetString(SessionHelper.GetValue("tbxTemplateConfigJson"), string.Empty);
@@ -63,6 +72,11 @@ namespace KX12To13Converter.Pages.CMSModules.KX12To13Converter.WidgetToPageBuild
             {
                 ddlMode.SelectedValue = ValidationHelper.GetString(SessionHelper.GetValue("ddlMode"), string.Empty);
             }
+            if (SessionHelper.GetValue("ddlSite") != null)
+            {
+                ddlSite.SelectedValue = ValidationHelper.GetString(SessionHelper.GetValue("ddlSite"), string.Empty);
+            }
+
         }
 
         protected void btnConvert_Click(object sender, EventArgs e)
@@ -70,6 +84,7 @@ namespace KX12To13Converter.Pages.CMSModules.KX12To13Converter.WidgetToPageBuild
             // save data in session
             SessionHelper.SetValue("ddlConfigMode", ddlConfigMode.SelectedValue);
             SessionHelper.SetValue("ddlMode", ddlMode.SelectedValue);
+            SessionHelper.SetValue("ddlSite", ddlSite.SelectedValue);
 
             List<TemplateConfiguration> templateConfiguration;
             List<ConverterSectionConfiguration> sectionConfiguration;
@@ -99,10 +114,11 @@ namespace KX12To13Converter.Pages.CMSModules.KX12To13Converter.WidgetToPageBuild
             }
 
             var converter = PortalEngineToMVCConverterRetriever.GetConverter(templateConfiguration, sectionConfiguration, defaultSectionConfiguration, widgetConfiguration);
-
+            int siteID = ValidationHelper.GetInteger(ddlSite.SelectedValue, 0);
             if (ddlMode.SelectedValue.Equals("preview", StringComparison.OrdinalIgnoreCase))
             {
-                var previewDoc = RunConversionMethods.GetDocumentByPath(tbxPreviewPath.Value.ToString());
+                string culture = CultureInfoProvider.GetCultureInfo(tbxPreviewCulture.Text)?.CultureCode ?? "en-US";
+                var previewDoc = RunConversionMethods.GetDocumentByPath(tbxPreviewPath.Value.ToString(), siteID, culture);
                 if(previewDoc != null) { 
                     converter.ProcessesDocuments(new List<TreeNode>() { previewDoc }, HandlePreviewDocument);
                 } else
@@ -113,7 +129,7 @@ namespace KX12To13Converter.Pages.CMSModules.KX12To13Converter.WidgetToPageBuild
             }
             else
             {
-                var documents = RunConversionMethods.GetDocumentsByPath(tbxProcessPath.Value.ToString());
+                var documents = RunConversionMethods.GetDocumentsByPath(tbxProcessPath.Value.ToString(), siteID);
                 switch (ddlMode.SelectedValue.ToLower())
                 {
                     case "process":

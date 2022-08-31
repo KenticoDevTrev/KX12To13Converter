@@ -2,6 +2,8 @@
 using CMS.Base;
 using CMS.DataEngine;
 using CMS.DocumentEngine;
+using CMS.Helpers;
+using CMS.Localization;
 using CMS.SiteProvider;
 using KX12To13Converter.Base.Classes.PortalEngineToPageBuilder;
 using KX12To13Converter.Base.GlobalEvents;
@@ -32,12 +34,25 @@ namespace KX12To13Converter.Base.GlobalEvents
         private void Document_Update_After(object sender, DocumentEventArgs e)
         {
             var document = e.Node;
-            if (document.IsPublished)
+            // Only processes published, non linked node documents that have their culture the same as the site.
+            if (!document.NodeIsContentOnly && document.IsPublished && document.NodeLinkedNodeID <= 0 && GetSiteCultures(document.NodeSiteName).Contains(document.DocumentCulture.ToLower()))
             {
                 // Adds a marked record for scheduled task to handle
                 KX12To13Queues.AddConversionToQueue(document.DocumentID, true);
-
             }
+        }
+
+        private List<string> GetSiteCultures(string siteName)
+        {
+            return CacheHelper.Cache(cs =>
+            {
+                if (cs.Cached)
+                {
+                    cs.CacheDependency = CacheHelper.GetCacheDependency(new string[] { $"{SiteInfo.OBJECT_TYPE}|all", $"{CultureInfo.OBJECT_TYPE}|all", $"{CultureSiteInfo.OBJECT_TYPE}|all" });
+                }
+
+                return CultureSiteInfoProvider.GetSiteCultures(siteName).Select(x => x.CultureCode.ToLower()).ToList();
+            }, new CacheSettings(30, "GetSiteCultureKX12To13", siteName));
         }
     }
 }

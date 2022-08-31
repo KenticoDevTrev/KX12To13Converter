@@ -2,7 +2,7 @@
 <package >
   <metadata>
     <id>KX12To13Converter.Base</id>
-    <version>12.29.1</version>
+    <version>12.29.13</version>
     <authors>Trevor Fayas</authors>
     <owners>Trevor Fayas</owners>
     <license type="expression">MIT</license>
@@ -10,8 +10,13 @@
     <iconUrl>https://avatars.githubusercontent.com/u/58479377?v=4</iconUrl>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
     <description>Implementation of the KX12To13Converter.Shared interfaces, needed with the KX12To13Converter.Admin package (unless you wish to use the source code, in which case pull down the KX12To13Converter.Base project from github and include it in your Kentico Xperience 12 admin solution).</description>
-    <releaseNotes>Fixed typo on Widget Event.</releaseNotes>
+    <releaseNotes>Listing Container page types in Page Type Converter since they possibly can have widgets.</releaseNotes>
     <copyright>Copyright 2022</copyright>
     <tags>Kentico Xperience, KX12, Kentico 12, Xperience 13, Upgrade, Converter</tags>
+<dependencies>
+    <dependency id="Kentico.Libraries" version="12.0.29" />
+    <dependency id="KX12To13Converter.Shared" version="12.29.12" />
+</dependencies>
   </metadata>
+
 </package>
