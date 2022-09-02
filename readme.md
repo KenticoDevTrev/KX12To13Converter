@@ -92,6 +92,9 @@ Below are some nuances of the conversion processes:
 * Since Inline Widgets do not exist in KX13, you can configure these to Ignore, Split, Wrap, or Add After (details on the Widget Configuration UI Step).
 * You can parse multiple zones into a single Editable Area if you wish.
 
+# GUIDE ON UPGRADING
+The [Wiki](https://github.com/KenticoDevTrev/KX12To13Converter/wiki) has an in depth guide to using this tool, and what to do during upgrade.  Please read this and follow along!
+
 # Acknowledgement, Contributions, bug fixes and License
 
 This tool is free for all to use, and probably my last major tool for the KX12 Portal Engine system.
