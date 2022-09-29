@@ -34,7 +34,7 @@ namespace KX12To13Converter.NuGet
                 e.Manifest.Metadata.IconUrl = "https://www.hbs.net/HBS/media/Favicon/favicon-96x96.png";
                 e.Manifest.Metadata.Tags = "Kentico Xperience 12 13 Converter Migrater";
                 e.Manifest.Metadata.Id = "KX12To13Converter.Admin";
-                e.Manifest.Metadata.ReleaseNotes = "Fixed null reference on Page Type Converter.";
+                e.Manifest.Metadata.ReleaseNotes = "Updated Unigrid xml to fix bug with Notes IsEmpty / IsNotEmpty, added Has Notes filter";
                 // Add nuget dependencies
 
                 // Add dependencies
@@ -53,8 +53,8 @@ namespace KX12To13Converter.NuGet
                              new ManifestDependency()
                             {
                                 Id="KX12To13Converter.Shared",
-                                Include = "12.29.12",
-                                Version = "12.29.12",
+                                Include = "12.29.14",
+                                Version = "12.29.14",
                                 Exclude = "13.0.0"
                             }
                         }

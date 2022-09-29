@@ -1,0 +1,57 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<grid>
+	<actions parameters="PageBuilderConversionsID">
+		<action name="edit" caption="$General.Edit$" fonticonclass="icon-edit" fonticonstyle="allow" />
+		<action name="#delete" caption="$General.Delete$" fonticonclass="icon-bin" fonticonstyle="critical" confirmation="$General.ConfirmDelete$" />
+		<action name="#retry" caption="Retry" fonticonclass="icon-rotate-left" />
+		<action name="#send" caption="Send" fonticonclass="icon-arrow-up-line" />
+		<action name="#save" caption="Save to CMS_Document" fonticonclass="icon-arrow-down-line" />
+	</actions>
+
+	<columns>
+		<column source="PageBuilderConversionDocumentID" externalsourcename="#transform: cms.document.DocumentName" caption="$general.displayname$" wrap="false" localize="true">
+			<filter type="text" source="PageBuilderConversionDocumentID" format="[{0}] in (select DocumentID from CMS_Document where DocumentName {1} {2})" />
+		</column>
+		<column source="PageBuilderConversionDocumentID" externalsourcename="#transform: cms.document.NodeAliasPath" caption="Node Alias Path" wrap="false" localize="true">
+			<filter type="text" source="PageBuilderConversionDocumentID" format="[{0}] in (select DocumentID from CMS_Document where NodeAliasPath {1} {2})" />
+		</column>
+		<column source="PageBuilderConversionDocumentID" externalsourcename="#transform: cms.document.DocumentCulture" caption="Culture" wrap="false" localize="true">
+			<filter type="text" source="PageBuilderConversionDocumentID" format="[{0}] in (select DocumentID from CMS_Document where DocumentCulture {1} {2})" />
+		</column>
+		<column source="PageBuilderConversionDocumentID" externalsourcename="ClassName" caption="Class" wrap="false">
+			<filter type="text" source="PageBuilderConversionDocumentID" format="[{0}] in (select DocumentID from View_CMS_Tree_joined TJ inner join CMS_Class C on TJ.NodeClassID = C.ClassID where (C.ClassName {1} {2}) or (C.ClassDisplayname {1} {2}))" />
+		</column>
+		<column source="PageBuilderConversionDocumentID" externalsourcename="Template" caption="Template" wrap="false">
+			<filter type="text" source="PageBuilderConversionDocumentID" format="[{0}] in (select DocumentID from View_CMS_Tree_Joined where COALESCE(DocumentPageTemplateID, NodetemplateID) is not null and COALESCE(DocumentPageTemplateID, NodetemplateID) in (Select PageTemplateID from CMS_PageTemplate where PageTemplateCodeName {1} {2} or PageTemplateDisplayName {1} {2}))" />
+		</column>
+		<column source="PageBuilderConversionSuccessful" caption="Conversion Successful" wrap="false" transformation="#yesno">
+			<filter type="bool" />
+		</column>
+		<column source="PageBuilderConversionNotes" externalsourcename="Notes" wrap="false" caption="Notes">
+			<filter type="text" source="PageBuilderConversionNotes" format="[{0}] {1} N'%{2}%' " />
+		</column>
+		<column source="PageBuilderConversionNotes" externalsourcename="HasNotes" visible="false" caption="Has Notes">
+			<filter type="bool" source="PageBuilderConversionNotes" format="({2} = 0 and [PageBuilderConversionNotes] = '[]') or ({2} = 1 and [PageBuilderConversionNotes] &lt;&gt; '[]')" />
+		</column>
+		<column source="PageBuilderConversionNotes" externalsourcename="HasErrors" caption="Has Errors">
+			<filter type="bool" source="PageBuilderConversionNotes" format="({2} = 1 and [PageBuilderConversionNotes] like '%&quot;IsError&quot;: true%') or ({2} = 0 and [PageBuilderConversionNotes] not like '%&quot;IsError&quot;: true%')" />
+		</column>
+		<column source="PageBuilderConversionDateProcessed" caption="Processed" wrap="false" transformation="#yesno">
+		</column>
+		<column source="PageBuilderConversionMarkedForSend" caption="Waiting to Send" wrap="false" transformation="#yesno">
+			<filter type="bool" />
+		</column>
+		<column source="PageBuilderConversionLastSendDate" caption="Last Send Date" wrap="false" transformation="#yesno">
+		</column>
+		<column source="PageBuilderConversionNoMatchFound" caption="KX13 Page Match Found" wrap="false" transformation="#yesno">
+			<filter type="bool" />
+		</column>
+		<column cssclass="filling-column" />
+	</columns>
+	<objecttype name="kx12to13converter.pagebuilderconversions" columns="PageBuilderConversionsID, PageBuilderConversionDocumentID, PageBuilderConversionSuccessful, PageBuilderConversionDateProcessed, PageBuilderConversionMarkedForSend, PageBuilderConversionLastSendDate, PageBuilderConversionNoMatchFound, PageBuilderConversionNotes" />
+	<options>
+		<key name="DisplayFilter" value="true" />
+		<key name="FilterLimit" value="10" />
+		<key name="ShowSelection" value="true" />
+	</options>
+</grid>
