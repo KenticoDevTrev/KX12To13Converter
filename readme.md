@@ -6,7 +6,7 @@ This tool allows you to convert  your portal engine site to a KX13 upgradeable i
 Kentico does not support migrating Kentico Xperience 12 Portal engine to Kentico Xperience 13, but it ***does*** support migrating a Kentico Xperience 12 MVC Site.  This tool does the heavy lifting of converting your portal engine site into a KX12 MVC Site so you can upgrade to KX13.  Features below.
 
 # Installation
-## Kentico Application ("Mother"/"Admin"):
+## KX12 Kentico Application ("Mother"/"Admin"):
 
 1. Install `KX12To13Converter.Admin` Nuget Package on your Kentico Application
 2. Either install the `KX12To13Converter.Base` Nuget Package on your Kentico Application, OR clone down the KX12To13Converter.Base class library from this repository and include it in your solution and reference it on your Kentico Application (for easier debugging).
@@ -16,6 +16,15 @@ Kentico does not support migrating Kentico Xperience 12 Portal engine to Kentico
 6. Go to Modules
 7. Search and edit `KX12 to 13 Converter`
 8. Go to `Sites` and add to your site.
+
+## KX13 Kentico Application ("Mother"/"Admin")
+Once the upgrade is complete and your solution is hotfixed to at least 13.0.31, you can optionally install the [KX12To13Converter.KX13Receiver](https://www.nuget.org/packages/KX12To13Converter.KX13Receiver).  Installing this will install/upgrade the exsiting KX12To13Converter module and allow you to re-convert and push pages from your KX12 instance to your KX13.
+
+The main purpose is that often times, post upgrade, you may realize that you had something misconfigured in the converter, or for long running upgrades, this allows you to push up 'new' pages (as long as there is a matching page on the KX13 side).
+
+To install, simply install the [KX12To13Converter.KX13Receiver](https://www.nuget.org/packages/KX12To13Converter.KX13Receiver) on the KX13 CMSApp admin project and run your site.  This module does all operations in code only, so deploying to other environments if necessary will only require a code push.  Removing the nuget package removes the functionality.
+
+Make sure that you configure the items in the settings, and that your hash values match between KX12 and KX13.
 
 # Wiki
 This repo has a [wiki](https://github.com/KenticoDevTrev/KX12To13Converter/wiki) with tips, tricks, sql queries and c# scripts to help you during this processes, please read through the [wiki](https://github.com/KenticoDevTrev/KX12To13Converter/wiki) before you begin your journey.
