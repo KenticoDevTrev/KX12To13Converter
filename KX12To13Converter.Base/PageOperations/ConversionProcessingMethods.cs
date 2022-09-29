@@ -98,7 +98,7 @@ namespace KX12To13Converter.Base.PageOperations
             pageBuilderConversionsInfo.PageBuilderConversionDateProcessed = DateTime.Now;
             pageBuilderConversionsInfo.PageBuilderConversionMarkForConversion = false;
             pageBuilderConversionsInfo.PageBuilderConversionPageBuilderJSON = JsonConvert.SerializeObject(results.PageBuilderData.ZoneConfiguration, Formatting.None);
-            pageBuilderConversionsInfo.PageBuilderConversionTemplateJSON = JsonConvert.SerializeObject(results.PageBuilderData.TemplateConfiguration, Formatting.None);
+            pageBuilderConversionsInfo.PageBuilderConversionTemplateJSON = !string.IsNullOrWhiteSpace(results.PageBuilderData.TemplateConfiguration.Identifier) ? JsonConvert.SerializeObject(results.PageBuilderData.TemplateConfiguration, Formatting.None) : string.Empty;
             pageBuilderConversionsInfo.PageBuilderConversionSuccessful = !results.CancelOperation;
             pageBuilderConversionsInfo.PageBuilderConversionNotes = JsonConvert.SerializeObject(results.ConversionNotes, Formatting.Indented);
 
@@ -335,8 +335,9 @@ namespace KX12To13Converter.Base.PageOperations
                 {
                     document.CheckOut();
                 }
-                document.SetValue("DocumentPageTemplateConfiguration", pageBuilderConversionsInfo.PageBuilderConversionTemplateJSON);
-                document.SetValue("DocumentPageBuilderWidgets", pageBuilderConversionsInfo.PageBuilderConversionPageBuilderJSON);
+                
+                document.SetValue("DocumentPageTemplateConfiguration", !string.IsNullOrWhiteSpace(pageBuilderConversionsInfo.PageBuilderConversionTemplateJSON) ? pageBuilderConversionsInfo.PageBuilderConversionTemplateJSON : null);
+                document.SetValue("DocumentPageBuilderWidgets", !string.IsNullOrWhiteSpace(pageBuilderConversionsInfo.PageBuilderConversionPageBuilderJSON) ? pageBuilderConversionsInfo.PageBuilderConversionPageBuilderJSON : null);
 
                 document.Update();
 

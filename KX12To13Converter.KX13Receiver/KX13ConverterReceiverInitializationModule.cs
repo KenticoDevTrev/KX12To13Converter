@@ -27,7 +27,7 @@ namespace KX12To13Converter.KX13Receiver
 
             var resourceInfoProvider = Service.Resolve<IResourceInfoProvider>();
             var settingsCategoryInfoProvider = Service.Resolve<ISettingsCategoryInfoProvider>();
-
+            var eventLog = Service.Resolve<IEventLogService>();
             ResourceInfo converter = resourceInfoProvider.Get("KX12To13Converter");
             bool createSettings = false;
             if (converter == null)
@@ -93,6 +93,8 @@ namespace KX12To13Converter.KX13Receiver
                     KeyExplanationText = "hover for instructions"
                 };
                 SettingsKeyInfoProvider.SetSettingsKeyInfo(hashSettingsKey);
+
+                eventLog.LogInformation("KX12To13Converter", "MODULEINSTALLED", eventDescription: "Installed KX12To13Converter receiver, please set up settings values.");
             }
             else if (converter.ResourceVersion.StartsWith("12."))
             {
@@ -138,8 +140,7 @@ namespace KX12To13Converter.KX13Receiver
                     settingsKey.Delete();
                 }
                 settingsCategoryInfoProvider.Get("PortalToPageBuilderConfigurations")?.Delete();
-
-                
+                eventLog.LogInformation("KX12To13Converter", "MODULEUPGRADED", eventDescription: "Upgraded the KX12To13Converter module, removing KX12 only settings / UIs and added KX13 settings, please set up settings values.");
             }
 
             if(createSettings)

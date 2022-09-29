@@ -37,7 +37,7 @@ namespace KX12To13Converter.Base.QueueProcessor
                 PageBuilderConversionMarkedForSend = markForSend,
                 PageBuilderConversionMarkForConversion = false,
                 PageBuilderConversionPageBuilderJSON = JsonConvert.SerializeObject(results.PageBuilderData.ZoneConfiguration, Formatting.None),
-                PageBuilderConversionTemplateJSON = JsonConvert.SerializeObject(results.PageBuilderData.TemplateConfiguration, Formatting.None),
+                PageBuilderConversionTemplateJSON = !string.IsNullOrWhiteSpace(results.PageBuilderData.TemplateConfiguration.Identifier) ? JsonConvert.SerializeObject(results.PageBuilderData.TemplateConfiguration, Formatting.None) : string.Empty,
                 PageBuilderConversionSuccessful = !results.CancelOperation,
                 PageBuilderConversionNotes = JsonConvert.SerializeObject(results.ConversionNotes, Formatting.Indented)
             };
@@ -200,7 +200,7 @@ namespace KX12To13Converter.Base.QueueProcessor
                     conversion.PageBuilderConversionSuccessful = !results.CancelOperation;
                     conversion.PageBuilderConversionMarkForConversion = false;
                     conversion.PageBuilderConversionMarkedForSend = true;
-                    conversion.PageBuilderConversionTemplateJSON = JsonConvert.SerializeObject(results.PageBuilderData.TemplateConfiguration, Formatting.None);
+                    conversion.PageBuilderConversionTemplateJSON = !string.IsNullOrWhiteSpace(results.PageBuilderData.TemplateConfiguration.Identifier) ? JsonConvert.SerializeObject(results.PageBuilderData.TemplateConfiguration, Formatting.None) : string.Empty;
                     conversion.PageBuilderConversionPageBuilderJSON = JsonConvert.SerializeObject(results.PageBuilderData.ZoneConfiguration, Formatting.None);
                     conversion.PageBuilderConversionNotes = JsonConvert.SerializeObject(results.ConversionNotes, Formatting.Indented);
                     PageBuilderConversionsInfoProvider.SetPageBuilderConversionsInfo(conversion);

@@ -127,8 +127,8 @@ namespace KX12To13Converter.KX13Receiver
                 }
 
                 // Set values
-                doc.SetValue("DocumentPageBuilderWidgets", request.documentPageBuilderWidgets);
-                doc.SetValue("DocumentPageTemplateConfiguration", request.documentPageTemplateConfiguration);
+                doc.SetValue("DocumentPageBuilderWidgets", !string.IsNullOrWhiteSpace(request.documentPageBuilderWidgets) ? request.documentPageBuilderWidgets : null);
+                doc.SetValue("DocumentPageTemplateConfiguration", !string.IsNullOrWhiteSpace(request.documentPageTemplateConfiguration) ? request.documentPageTemplateConfiguration : null);
                 doc.DocumentCustomData.SetValue("LastKX12To13ConversionDate", DateTime.Now);
 
                 DocumentHelper.UpdateDocument(doc, new TreeProvider());

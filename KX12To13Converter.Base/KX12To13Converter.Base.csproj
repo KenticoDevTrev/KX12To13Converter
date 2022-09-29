@@ -449,6 +449,7 @@
     <Compile Include="Events\BuildPageFindSectionWebpartEventHandler.cs" />
     <Compile Include="Events\ProcessPageEventHandler.cs" />
     <Compile Include="Events\ProcessSectionEventHandler.cs" />
+    <Compile Include="Events\ProcessWidget_After_CamelCase.cs" />
     <Compile Include="Events\ProcessSection_After_BootstrapLayout.cs" />
     <Compile Include="Events\ProcessSectionZoneEventHandler.cs" />
     <Compile Include="Events\ProcessWidgetEventHandler.cs" />

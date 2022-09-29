@@ -2,7 +2,7 @@
 <package >
   <metadata>
     <id>KX12To13Converter.KX13Receiver</id>
-    <version>13.0.0</version>
+    <version>13.0.1</version>
     <authors>Trevor Fayas</authors>
     <owners>Heartland Business Systems</owners>
     <license type="expression">MIT</license>
@@ -10,7 +10,7 @@
     <iconUrl>https://avatars.githubusercontent.com/u/58479377?v=4</iconUrl>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
     <description>To be installed on the KX13 Admin, this allows you to push updated conversion from your Kentico Xperience 12 instance to your Kentico Xperience 13 instance, used during upgrades.</description>
-    <releaseNotes>Initial Release.</releaseNotes>
+    <releaseNotes>Added Event Log on module update/install as well as handle empty template / widgets and set to null.</releaseNotes>
     <copyright>Copyright 2022</copyright>
     <tags>Kentico Xperience, KX12, Kentico 12, Xperience 13, Upgrade, Converter</tags>
 <dependencies>
