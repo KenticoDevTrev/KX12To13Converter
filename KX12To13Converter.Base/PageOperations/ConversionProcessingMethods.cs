@@ -168,12 +168,14 @@ namespace KX12To13Converter.Base.PageOperations
 
                     if (httpWebRequest.HaveResponse && response != null)
                     {
+                        string responseText = string.Empty;
+                        using (var reader = new StreamReader(response.GetResponseStream()))
+                        {
+                            result = reader.ReadToEnd();
+                        }
+
                         if (response.StatusCode == HttpStatusCode.OK)
                         {
-                            using (var reader = new StreamReader(response.GetResponseStream()))
-                            {
-                                result = reader.ReadToEnd();
-                            }
                             conversionNotes.Add(new ConversionNote()
                             {
                                 IsError = false,
@@ -188,6 +190,22 @@ namespace KX12To13Converter.Base.PageOperations
                             pageBuilderConversionsInfo.PageBuilderConversionNoMatchFound = false;
                             PageBuilderConversionsInfoProvider.SetPageBuilderConversionsInfo(pageBuilderConversionsInfo);
                         }
+                        else if (response.StatusCode == HttpStatusCode.Unauthorized)
+                        {
+                            // No Match
+                            conversionNotes.Add(new ConversionNote()
+                            {
+                                IsError = false,
+                                Source = "HandleProcessAndSendDocument",
+                                Type = "ReceiverDisabledOrHashMismatch",
+                                Description = result
+                            });
+
+                            pageBuilderConversionsInfo.PageBuilderConversionMarkedForSend = false;
+                            pageBuilderConversionsInfo.PageBuilderConversionNotes = JsonConvert.SerializeObject(conversionNotes, Formatting.Indented);
+                            pageBuilderConversionsInfo.PageBuilderConversionNoMatchFound = false;
+                            PageBuilderConversionsInfoProvider.SetPageBuilderConversionsInfo(pageBuilderConversionsInfo);
+                        }
                         else if (response.StatusCode == HttpStatusCode.Gone)
                         {
                             // No Match
@@ -196,7 +214,7 @@ namespace KX12To13Converter.Base.PageOperations
                                 IsError = false,
                                 Source = "HandleProcessAndSendDocument",
                                 Type = "NoMatchFound",
-                                Description = $"Could Not Find a Document Matching this one on the KX13 instance."
+                                Description = result
                             });
 
                             pageBuilderConversionsInfo.PageBuilderConversionMarkedForSend = false;
@@ -204,9 +222,25 @@ namespace KX12To13Converter.Base.PageOperations
                             pageBuilderConversionsInfo.PageBuilderConversionNoMatchFound = true;
                             PageBuilderConversionsInfoProvider.SetPageBuilderConversionsInfo(pageBuilderConversionsInfo);
                         }
+                        else if (response.StatusCode == HttpStatusCode.Conflict)
+                        {
+                            // No Match
+                            conversionNotes.Add(new ConversionNote()
+                            {
+                                IsError = false,
+                                Source = "HandleProcessAndSendDocument",
+                                Type = "DocFoundButCantUpdate",
+                                Description = result
+                            });
+
+                            pageBuilderConversionsInfo.PageBuilderConversionMarkedForSend = false;
+                            pageBuilderConversionsInfo.PageBuilderConversionNotes = JsonConvert.SerializeObject(conversionNotes, Formatting.Indented);
+                            pageBuilderConversionsInfo.PageBuilderConversionNoMatchFound = false;
+                            PageBuilderConversionsInfoProvider.SetPageBuilderConversionsInfo(pageBuilderConversionsInfo);
+                        }
                         else
                         {
-                            throw new Exception("Unknown Response code: " + response.StatusCode);
+                            throw new Exception($"Unknown Response code: {response.StatusCode}: {result}");
                         }
                     }
                 }

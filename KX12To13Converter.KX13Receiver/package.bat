@@ -1,0 +1,1 @@
+nuget pack KX12To13Converter.KX13Receiver.csproj -prop configuration=Release

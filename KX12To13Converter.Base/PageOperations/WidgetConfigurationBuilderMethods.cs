@@ -5,6 +5,7 @@ using CMS.PortalEngine;
 using KX12To13Converter.Interfaces;
 using KX12To13Converter.PortalEngineToPageBuilder;
 using KX12To13Converter.PortalEngineToPageBuilder.SupportingConverterClasses;
+using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.Data;
@@ -104,7 +105,6 @@ namespace KX12To13Converter.Base.PageOperations
                     }
                 }
             };
-
 
             foreach (var widget in widgets)
             {
@@ -247,6 +247,126 @@ namespace KX12To13Converter.Base.PageOperations
 
                 widgetConfigurations.Add(widgetConfiguration);
             }
+
+            if(!widgetConfigurations.Any(x => x.PE_Widget.PE_WidgetCodeName.Equals("editabletext", StringComparison.OrdinalIgnoreCase)))
+            {
+                // Add default editabletext
+                widgetConfigurations.Add(JsonConvert.DeserializeObject<ConverterWidgetConfiguration>(
+                    @"{
+                      ""PE_Widget"": {
+                        ""PE_WidgetCodeName"": ""editabletext"",
+                        ""IsInlineWidget"": false,
+                        ""IsEditorWidget"": true,
+                        ""IncludeHtmlBeforeAfter"": false,
+                        ""IncludeWebpartContainerProperties"": false,
+                        ""RenderIfInline"": false,
+                        ""KeyValues"": [
+                          {
+                                    ""Key"": ""EditableText"",
+                            ""Value"": null,
+                            ""DefaultValue"": null,
+                            ""OutKey"": ""html"",
+                            ""CanContainInlineWidgets"": true,
+                            ""InlineWidgetMode"": ""ADDAFTER""
+                          },
+                          {
+                                    ""Key"": ""EncodeText"",
+                            ""Value"": """",
+                            ""DefaultValue"": ""false"",
+                            ""OutKey"": ""IGNORE"",
+                            ""CanContainInlineWidgets"": false,
+                            ""InlineWidgetMode"": ""ADDAFTER""
+                          },
+                          {
+                                    ""Key"": ""HtmlAreaToolbar"",
+                            ""Value"": """",
+                            ""DefaultValue"": ""Full"",
+                            ""OutKey"": ""IGNORE"",
+                            ""CanContainInlineWidgets"": false,
+                            ""InlineWidgetMode"": ""ADDAFTER""
+                          },
+                          {
+                                    ""Key"": ""HtmlAreaToolbarLocation"",
+                            ""Value"": """",
+                            ""DefaultValue"": ""Out:FCKToolbar"",
+                            ""OutKey"": ""IGNORE"",
+                            ""CanContainInlineWidgets"": false,
+                            ""InlineWidgetMode"": ""ADDAFTER""
+                          }
+                        ]
+                      },
+                      ""PB_Widget"": {
+                                ""PB_WidgetIdentifier"": ""RichTextEditor"",
+                        ""AdditionalKeyValues"": {
+                                    ""IGNORE"": """"
+                        }
+                            }
+                        }"));
+            }
+            if (!widgetConfigurations.Any(x => x.PE_Widget.PE_WidgetCodeName.Equals("edtiableimage", StringComparison.OrdinalIgnoreCase)))
+            {
+                // Add default editableimage
+                widgetConfigurations.Add(JsonConvert.DeserializeObject<ConverterWidgetConfiguration>(
+                    @"{
+                      ""PE_Widget"": {
+                        ""PE_WidgetCodeName"": ""EditableImage"",
+                        ""IsInlineWidget"": false,
+                        ""IsEditorWidget"": true,
+                        ""IncludeHtmlBeforeAfter"": false,
+                        ""IncludeWebpartContainerProperties"": false,
+                        ""RenderIfInline"": false,
+                        ""KeyValues"": [
+                          {
+                            ""Key"": ""EditableImageUrl"",
+                            ""Value"": null,
+                            ""DefaultValue"": null,
+                            ""OutKey"": ""INHERIT"",
+                            ""CanContainInlineWidgets"": false,
+                            ""InlineWidgetMode"": ""ADDAFTER""
+                          },
+                          {
+                            ""Key"": ""ImageTitle"",
+                            ""Value"": """",
+                            ""DefaultValue"": null,
+                            ""OutKey"": ""INHERIT"",
+                            ""CanContainInlineWidgets"": false,
+                            ""InlineWidgetMode"": ""ADDAFTER""
+                          },
+                          {
+                            ""Key"": ""AlternateText"",
+                            ""Value"": """",
+                            ""DefaultValue"": null,
+                            ""OutKey"": ""INHERIT"",
+                            ""CanContainInlineWidgets"": false,
+                            ""InlineWidgetMode"": ""ADDAFTER""
+                          },
+                          {
+                            ""Key"": ""ImageWidth"",
+                            ""Value"": """",
+                            ""DefaultValue"": null,
+                            ""OutKey"": ""INHERIT"",
+                            ""CanContainInlineWidgets"": false,
+                            ""InlineWidgetMode"": ""ADDAFTER""
+                          },
+                          {
+                            ""Key"": ""ImageHeight"",
+                            ""Value"": """",
+                            ""DefaultValue"": null,
+                            ""OutKey"": ""INHERIT"",
+                            ""CanContainInlineWidgets"": false,
+                            ""InlineWidgetMode"": ""ADDAFTER""
+                          }
+                        ]
+                      },
+                      ""PB_Widget"": {
+                        ""PB_WidgetIdentifier"": ""INHERIT"",
+                        ""AdditionalKeyValues"": {
+                          ""IGNORE"": """"
+                        }
+                      }
+                    }"));
+            }
+
             return widgetConfigurations;
 
         }

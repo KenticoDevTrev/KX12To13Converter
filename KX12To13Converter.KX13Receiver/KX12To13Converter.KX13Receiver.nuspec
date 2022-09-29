@@ -1,0 +1,22 @@
+<?xml version="1.0"?>
+<package >
+  <metadata>
+    <id>KX12To13Converter.KX13Receiver</id>
+    <version>13.0.0</version>
+    <authors>Trevor Fayas</authors>
+    <owners>Heartland Business Systems</owners>
+    <license type="expression">MIT</license>
+    <projectUrl>https://github.com/KenticoDevTrev/KX12To13Converter</projectUrl>
+    <iconUrl>https://avatars.githubusercontent.com/u/58479377?v=4</iconUrl>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <description>To be installed on the KX13 Admin, this allows you to push updated conversion from your Kentico Xperience 12 instance to your Kentico Xperience 13 instance, used during upgrades.</description>
+    <releaseNotes>Initial Release.</releaseNotes>
+    <copyright>Copyright 2022</copyright>
+    <tags>Kentico Xperience, KX12, Kentico 12, Xperience 13, Upgrade, Converter</tags>
+<dependencies>
+    <dependency id="Microsoft.AspNet.WebApi.WebHost" version="[5.2.3,5.3.0)" />
+    <dependency id="Kentico.Xperience.Libraries" version="[13.0.31,13.1.0)" />
+</dependencies>
+  </metadata>
+
+</package>

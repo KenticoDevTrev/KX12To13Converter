@@ -47,13 +47,24 @@ namespace KX12To13Converter.Base.PageOperations
 -- ALWAYS Backup before running these.  Don't be THAT Guy                    --
 -- Author: Trevor Fayas, version 1.0.0                                       --
 -------------------------------------------------------------------------------
-
+IF OBJECT_ID(N'dbo.PM_ProjectTask', N'U') IS NOT NULL  BEGIN
 drop table PM_ProjectTask
+END
+IF OBJECT_ID(N'dbo.PM_ProjectRolePermission', N'U') IS NOT NULL BEGIN
 drop table PM_ProjectRolePermission
+END
+IF OBJECT_ID(N'dbo.PM_Project', N'U') IS NOT NULL  BEGIN
 drop table PM_Project
+END
+IF OBJECT_ID(N'dbo.PM_ProjectStatus', N'U') IS NOT NULL  BEGIN
 drop table PM_ProjectStatus
+END
+IF OBJECT_ID(N'dbo.PM_ProjectTaskPriority', N'U') IS NOT NULL  BEGIN
 drop table PM_ProjectTaskPriority
+END
+IF OBJECT_ID(N'dbo.PM_ProjectTaskStatus', N'U') IS NOT NULL  BEGIN
 drop table PM_ProjectTaskStatus
+END
             ";
 
                 ConnectionHelper.ExecuteNonQuery(query, null, QueryTypeEnum.SQLQuery, true);
@@ -111,14 +122,21 @@ ALTER DATABASE [" + SqlHelper.EscapeQuotes(databaseName) + "] SET COMPATIBILITY_
 -- ALWAYS Backup before running these.  Don't be THAT Guy                    --
 -- Author: Trevor Fayas, version 1.0.0                                       --
 -------------------------------------------------------------------------------
+    IF OBJECT_ID('dbo.DEFAULT_CMS_VersionHistory_DocumentNamePath', 'D') IS NULL BEGIN
+    ALTER TABLE [dbo].[CMS_VersionHistory] ADD  CONSTRAINT [DEFAULT_CMS_VersionHistory_DocumentNamePath]  DEFAULT (N'') FOR [DocumentNamePath]
+    END
 
-ALTER TABLE [dbo].[CMS_VersionHistory] ADD  CONSTRAINT [DEFAULT_CMS_VersionHistory_DocumentNamePath]  DEFAULT (N'') FOR [DocumentNamePath]
-
+IF OBJECT_ID('dbo.DEFAULT_CMS_Document_DocumentInheritsStylesheet', 'D') IS NULL BEGIN
 ALTER TABLE [dbo].[CMS_Document] ADD  CONSTRAINT [DEFAULT_CMS_Document_DocumentInheritsStylesheet]  DEFAULT ((1)) FOR [DocumentInheritsStylesheet]
+END
 
+IF OBJECT_ID('dbo.DEFAULT_Analytics_Statistics_StatisticsObjectCulture', 'D') IS NULL BEGIN
 ALTER TABLE [dbo].[Analytics_Statistics] ADD  CONSTRAINT [DEFAULT_Analytics_Statistics_StatisticsObjectCulture]  DEFAULT (N'') FOR [StatisticsObjectCulture]
+END
 
+IF OBJECT_ID('dbo.DEFAULT_Analytics_Statistics_StatisticsObjectName', 'D') IS NULL BEGIN
 ALTER TABLE [dbo].[Analytics_Statistics] ADD  CONSTRAINT [DEFAULT_Analytics_Statistics_StatisticsObjectName]  DEFAULT (N'') FOR [StatisticsObjectName]
+END
             ";
 
                 ConnectionHelper.ExecuteNonQuery(query, null, QueryTypeEnum.SQLQuery, true);
@@ -147,8 +165,9 @@ ALTER TABLE [dbo].[Analytics_Statistics] ADD  CONSTRAINT [DEFAULT_Analytics_Stat
 -- Author: Trevor Fayas, version 1.0.0                                       --
 -------------------------------------------------------------------------------
 
-alter table CMS_CssStyleSheetSite
-drop constraint FK_CMS_CssStylesheetSite_StylesheetID_CMS_CssStylesheet
+IF OBJECT_ID('dbo.FK_CMS_CssStylesheetSite_StylesheetID_CMS_CssStylesheet', 'F') IS NOT NULL BEGIN
+alter table CMS_CssStyleSheetSite drop constraint FK_CMS_CssStylesheetSite_StylesheetID_CMS_CssStylesheet
+END
 
 delete from  CMS_CssStylesheetSite
 delete from [CMS_CssStylesheet]
@@ -282,11 +301,19 @@ delete from CMS_Webpart where WebPartResourceID = (Select R.REsourceID from CMS_
 delete from CMS_FormUserControl where UserControlResourceID in (Select R.REsourceID from CMS_Resource R where ResourceGUID =@elementIdentifier)
 delete from CMS_ScheduledTask where TaskResourceID in (Select R.REsourceID from CMS_Resource R where ResourceGUID =@elementIdentifier)
 delete from CMS_AlternativeForm where FormClassID in (select ClassID from CMS_Class where ClassResourceID in (Select R.REsourceID from CMS_Resource R where ResourceGUID =@elementIdentifier))
-delete from CMS_Query where ClassID in (select ClassID from CMS_Class where ClassResourceID in (Select R.REsourceID from CMS_Resource R where ResourceGUID =@elementIdentifier))
-delete from CMS_Class where ClassResourceID in (Select R.REsourceID from CMS_Resource R where ResourceGUID =@elementIdentifier)
+delete from CMS_Query where ClassID in (select Sub.ClassID from CMS_Class Sub where ClassResourceID in (Select R.REsourceID from CMS_Resource R where ResourceGUID =@elementIdentifier))
+delete from CMS_Transformation where TransformationClassID in (select ClassID from CMS_Class where ClassResourceID in (Select R.REsourceID from CMS_Resource R where ResourceGUID =@elementIdentifier))
+
+delete from CMS_RolePermission where PermissionID in (select P.PermissionID from  CMS_Permission P where ClassID in (select Sub.ClassID from CMS_Class Sub where ClassResourceID in (Select R.REsourceID from CMS_Resource R where ResourceGUID =@elementIdentifier)))
 delete from CMS_RolePermission where PermissionID in (select P.PermissionID from  CMS_Permission P where ResourceID in (Select R.REsourceID from CMS_Resource R where ResourceGUID =@elementIdentifier))
 
+delete from CMS_Permission where ClassID in (select Sub.ClassID from CMS_Class Sub where ClassResourceID in (Select R.REsourceID from CMS_Resource R where ResourceGUID =@elementIdentifier)
 delete from CMS_Permission where ResourceID in (Select R.REsourceID from CMS_Resource R where ResourceGUID =@elementIdentifier)
+
+delete from CMS_ClassSite where ClassID in (select Sub.ClassID from CMS_Class Sub where ClassResourceID in (Select R.REsourceID from CMS_Resource R where ResourceGUID =@elementIdentifier))
+
+delete from CMS_Class where ClassResourceID in (Select R.REsourceID from CMS_Resource R where ResourceGUID =@elementIdentifier)
+
 delete from CMS_SettingsKey where KeyCategoryID in  (select C3.CategoryID from CMS_SettingsCategory C3 where C3.CategoryParentID in (select C2.CategoryID from CMS_SettingsCategory C2 where C2.CategoryParentID in  (select C.CategoryID from CMS_SettingsCategory C where C.CategoryResourceID in  (Select R.REsourceID from CMS_Resource R where ResourceGUID =@elementIdentifier))))
 delete from CMS_SettingsKey where KeyCategoryID in  (select CategoryID from CMS_SettingsCategory where CategoryParentID in  (select C.CategoryID from CMS_SettingsCategory C where C.CategoryResourceID in  (Select R.REsourceID from CMS_Resource R where ResourceGUID =@elementIdentifier)))
 delete from CMS_SettingsKey where KeyCategoryID in  (select CategoryID from CMS_SettingsCategory where CategoryResourceID in  (Select R.REsourceID from CMS_Resource R where ResourceGUID =@elementIdentifier))
