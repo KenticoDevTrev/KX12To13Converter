@@ -17,7 +17,7 @@ namespace KX12To13Converter.PortalEngineToPageBuilder
     public class PageBuilderTemplate
     {
         public string PB_TemplateIdentifier { get; set; }
-        public Dictionary<string, string> PB_KeyValuePairs { get; set; }
+        public Dictionary<string, object> PB_KeyValuePairs { get; set; }
     }
 
     [Serializable]

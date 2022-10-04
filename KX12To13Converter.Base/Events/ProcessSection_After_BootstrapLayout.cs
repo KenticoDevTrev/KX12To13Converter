@@ -33,18 +33,18 @@ namespace KX12To13Converter.Events
             {
                 if (propertyKey.ToLower().Contains("width"))
                 {
-                    if (string.IsNullOrWhiteSpace(pbSection.Properties[propertyKey]))
+                    if (string.IsNullOrWhiteSpace((string)pbSection.Properties[propertyKey]))
                     {
                         pbSection.Properties[propertyKey] = "-12";
                     }
                     else
                     {
-                        pbSection.Properties[propertyKey] = $"-{pbSection.Properties[propertyKey].Trim('-')}";
+                        pbSection.Properties[propertyKey] = $"-{((string)pbSection.Properties[propertyKey]).Trim('-')}";
                     }
                 }
                 if (propertyKey.Equals("columnCSSPrepend", StringComparison.OrdinalIgnoreCase))
                 {
-                    pbSection.Properties[propertyKey] = pbSection.Properties[propertyKey].Trim('-');
+                    pbSection.Properties[propertyKey] = ((string)pbSection.Properties[propertyKey]).Trim('-');
                 }
 
                 // No other conversion needed
@@ -54,7 +54,7 @@ namespace KX12To13Converter.Events
                 }
 
                 // Handle bootstrap 3 to 4/5 conversion
-                string value = pbSection.Properties[propertyKey];
+                string value = ((string)pbSection.Properties[propertyKey]);
                 if (!string.IsNullOrWhiteSpace(value) && (propertyKey.ToLower().Contains("additionalcss") || propertyKey.ToLower().Contains("cssprepend")))
                 {
 

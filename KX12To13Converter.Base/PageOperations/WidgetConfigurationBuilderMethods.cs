@@ -98,7 +98,7 @@ namespace KX12To13Converter.Base.PageOperations
                     PB_Widget = new PageBuilderWidget()
                     {
                         PB_WidgetIdentifier="EnterPageWidgetIdentifierIfNotProvidedCantDoInlineWidgets",
-                        AdditionalKeyValues = new Dictionary<string, string>()
+                        AdditionalKeyValues = new Dictionary<string, object>()
                         {
                             {"IGNORE", String.Empty }
                         }
@@ -127,7 +127,7 @@ namespace KX12To13Converter.Base.PageOperations
                     PB_Widget = new PageBuilderWidget()
                     {
                         PB_WidgetIdentifier = "INHERIT",
-                        AdditionalKeyValues = new Dictionary<string, string>()
+                        AdditionalKeyValues = new Dictionary<string, object>()
                         {
                             {"IGNORE", String.Empty }
                         }

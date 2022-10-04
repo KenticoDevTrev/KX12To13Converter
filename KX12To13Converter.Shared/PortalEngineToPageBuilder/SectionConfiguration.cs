@@ -57,7 +57,7 @@ namespace KX12To13Converter.PortalEngineToPageBuilder
         /// <summary>
         /// These are not linked to existing Key/Values on the widget zone properties
         /// </summary>
-        public Dictionary<string, string> AdditionalKeyValues { get; set; }
+        public Dictionary<string, object> AdditionalKeyValues { get; set; }
     }
 
     

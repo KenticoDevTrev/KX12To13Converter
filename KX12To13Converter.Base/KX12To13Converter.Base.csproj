@@ -253,8 +253,8 @@
     <Reference Include="GlobalLink.Connect, Version=4.18.2.0, Culture=neutral, PublicKeyToken=946d606070618fd4, processorArchitecture=MSIL">
       <HintPath>packages\GlobalLink.Connect.4.18.3.1\lib\net46\GlobalLink.Connect.dll</HintPath>
     </Reference>
-    <Reference Include="KX12To13Converter.Shared, Version=12.29.12.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>packages\KX12To13Converter.Shared.12.29.12\lib\net461\KX12To13Converter.Shared.dll</HintPath>
+    <Reference Include="KX12To13Converter.Shared, Version=12.29.16.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>packages\KX12To13Converter.Shared.12.29.16-alpha\lib\net461\KX12To13Converter.Shared.dll</HintPath>
     </Reference>
     <Reference Include="LinqToTwitter.net, Version=4.0.0.0, Culture=neutral, PublicKeyToken=957107be965c25d9, processorArchitecture=MSIL">
       <HintPath>packages\linqtotwitter.4.0.0\lib\net45\LinqToTwitter.net.dll</HintPath>

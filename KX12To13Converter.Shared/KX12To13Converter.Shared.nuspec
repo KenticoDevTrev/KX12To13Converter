@@ -2,7 +2,7 @@
 <package >
   <metadata>
     <id>KX12To13Converter.Shared</id>
-    <version>12.29.14-prerelease</version>
+    <version>12.29.16-alpha-2</version>
     <authors>Trevor Fayas</authors>
     <owners>Trevor Fayas</owners>
     <license type="expression">MIT</license>

@@ -83,7 +83,7 @@ namespace KX12To13Converter.PortalEngineToPageBuilder.SupportingConverterClasses
         /// </summary>
         [DataMember]
         [JsonProperty("properties")]
-        public Dictionary<string, string> Properties { get; set; }
+        public Dictionary<string, object> Properties { get; set; }
         //public ISectionProperties Properties { get; set; }
 
         /// <summary>
@@ -216,7 +216,7 @@ namespace KX12To13Converter.PortalEngineToPageBuilder.SupportingConverterClasses
         /// </summary>
         [DataMember]
         [JsonProperty("properties")]
-        public Dictionary<string, string> Properties { get; set; }
+        public Dictionary<string, object> Properties { get; set; }
         //public IWidgetProperties Properties { get; set; }
 
 
@@ -273,7 +273,7 @@ namespace KX12To13Converter.PortalEngineToPageBuilder.SupportingConverterClasses
         [DataMember]
         [JsonProperty("properties")]
         //public IPageTemplateProperties Properties { get; set; }
-        public Dictionary<string, string> Properties { get; set; } = new Dictionary<string, string>();
+        public Dictionary<string, object> Properties { get; set; } = new Dictionary<string, object>();
     }
 
     public interface IPageTemplateProperties : IComponentProperties

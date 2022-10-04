@@ -44,7 +44,7 @@ DocumentIsArchived = 0 and DocumentCanBePublished = 1 and COALESCE(DocumentPubli
                     PB_Template = new PageBuilderTemplate()
                     {
                         PB_TemplateIdentifier = "INHERIT",
-                        PB_KeyValuePairs = new Dictionary<string, string>()
+                        PB_KeyValuePairs = new Dictionary<string, object>()
                         {
                             { "IGNORE", String.Empty }
                         }

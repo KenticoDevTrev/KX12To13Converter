@@ -50,7 +50,7 @@ DocumentIsArchived = 0 and DocumentCanBePublished = 1 and COALESCE(DocumentPubli
                     },
                     PB_Section = new PageBuilderSection()
                     {
-                        AdditionalKeyValues = new Dictionary<string, string>() { { "IGNORE", "" } },
+                        AdditionalKeyValues = new Dictionary<string, object>() { { "IGNORE", "" } },
                         SectionIdentifier = widget.WidgetName.StartsWith("ColumnLayout_Bootstrap") ? "Bootstrap4LayoutTool" : "INHERIT"
                     }
                 };
@@ -88,7 +88,7 @@ DocumentIsArchived = 0 and DocumentCanBePublished = 1 and COALESCE(DocumentPubli
             return new PageBuilderSection()
             {
                 SectionIdentifier = "YourDefaultTypeIdentifier",
-                AdditionalKeyValues = new Dictionary<string, string>() { { "PropertyName", "PropertyValueIfAny" } }
+                AdditionalKeyValues = new Dictionary<string, object>() { { "PropertyName", "PropertyValueIfAny" } }
             };
         }
     }

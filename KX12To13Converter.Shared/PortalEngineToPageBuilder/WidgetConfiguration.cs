@@ -70,6 +70,6 @@ namespace KX12To13Converter.PortalEngineToPageBuilder
         /// <summary>
         /// Additional ones not listed in the PortalEngineWidget keyvalues
         /// </summary>
-        public Dictionary<string, string> AdditionalKeyValues { get; set; }
+        public Dictionary<string, object> AdditionalKeyValues { get; set; }
     }
 }

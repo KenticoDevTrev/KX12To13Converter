@@ -462,7 +462,7 @@ namespace KX12To13Converter.Base.Classes.PortalEngineToPageBuilder
                 return;
             }
 
-            Dictionary<string, string> keyValues = new Dictionary<string, string>();
+            var keyValues = new Dictionary<string, object>();
             pbSection.Identifier = Guid.NewGuid();
 
             if (sectionConfiguration != null)
@@ -701,7 +701,7 @@ namespace KX12To13Converter.Base.Classes.PortalEngineToPageBuilder
                 pbWidget.TypeIdentifier = widgetConfiguation.PB_Widget.PB_WidgetIdentifier.Replace("INHERIT", webpartInstance.WebPartType);
                 pbWidget.Variants = new List<WidgetVariantConfiguration>();
 
-                Dictionary<string, string> properties = new Dictionary<string, string>();
+                var properties = new Dictionary<string, object>();
                 // Configuration Keys
                 foreach (var keyvalue in widgetConfiguation.PE_Widget.KeyValues.Where(x => !(x.OutKey?.Equals("IGNORE", StringComparison.OrdinalIgnoreCase) ?? false) && !reservedKeys.Contains(x.Key.ToLowerInvariant())))
                 {
@@ -841,7 +841,7 @@ namespace KX12To13Converter.Base.Classes.PortalEngineToPageBuilder
                 pbWidget.TypeIdentifier = webpartInstance.WebPartType;
                 pbWidget.Variants = new List<WidgetVariantConfiguration>();
 
-                Dictionary<string, string> properties = new Dictionary<string, string>();
+                var properties = new Dictionary<string, object>();
                 foreach (var property in widgetFields)
                 {
                     properties.Add(property.Name, webpartInstance.GetValue(property.Name)?.ToString() ?? property.DefaultValue);
@@ -852,7 +852,7 @@ namespace KX12To13Converter.Base.Classes.PortalEngineToPageBuilder
                     properties.Add("EditableImageUrl", peWidget.EditableImageUrl);
                     if (properties.ContainsKey("AlternateText"))
                     {
-                        properties["AlternativeText"] = DataHelper.GetNotEmpty(DataHelper.GetNotEmpty(peWidget.EditableImageAlt, properties["AlternativeText"]), string.Empty);
+                        properties["AlternativeText"] = DataHelper.GetNotEmpty(DataHelper.GetNotEmpty(peWidget.EditableImageAlt, (string) properties["AlternativeText"]), string.Empty);
                     }
                     else
                     {
