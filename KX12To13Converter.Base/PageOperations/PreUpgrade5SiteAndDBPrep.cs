@@ -307,7 +307,7 @@ delete from CMS_Transformation where TransformationClassID in (select ClassID fr
 delete from CMS_RolePermission where PermissionID in (select P.PermissionID from  CMS_Permission P where ClassID in (select Sub.ClassID from CMS_Class Sub where ClassResourceID in (Select R.REsourceID from CMS_Resource R where ResourceGUID =@elementIdentifier)))
 delete from CMS_RolePermission where PermissionID in (select P.PermissionID from  CMS_Permission P where ResourceID in (Select R.REsourceID from CMS_Resource R where ResourceGUID =@elementIdentifier))
 
-delete from CMS_Permission where ClassID in (select Sub.ClassID from CMS_Class Sub where ClassResourceID in (Select R.REsourceID from CMS_Resource R where ResourceGUID =@elementIdentifier)
+delete from CMS_Permission where ClassID in (select Sub.ClassID from CMS_Class Sub where ClassResourceID in (Select R.REsourceID from CMS_Resource R where ResourceGUID =@elementIdentifier))
 delete from CMS_Permission where ResourceID in (Select R.REsourceID from CMS_Resource R where ResourceGUID =@elementIdentifier)
 
 delete from CMS_ClassSite where ClassID in (select Sub.ClassID from CMS_Class Sub where ClassResourceID in (Select R.REsourceID from CMS_Resource R where ResourceGUID =@elementIdentifier))
