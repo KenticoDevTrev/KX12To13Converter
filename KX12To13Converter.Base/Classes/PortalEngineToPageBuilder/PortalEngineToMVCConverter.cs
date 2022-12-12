@@ -14,6 +14,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Web;
 using System.Xml;
 
@@ -30,7 +31,7 @@ namespace KX12To13Converter.Base.Classes.PortalEngineToPageBuilder
             SectionConfigurations = sectionConfigurations;
             DefaultSectionConfiguration = defaultSectionConfiguration;
             WidgetConfigurations = widgetConfigurations;
-            WidgetTypeToConfiguration = WidgetConfigurations.ToDictionary(key => key.PE_Widget.PE_WidgetCodeName.ToLowerInvariant(), value => value);
+            WidgetTypeToConfiguration = WidgetConfigurations.GroupBy(key => key.PE_Widget.PE_WidgetCodeName.ToLowerInvariant()).ToDictionary(key => key.Key, value => value.First());
 
             if (widgetConfigurations.Any(wc => wc.PE_Widget.KeyValues.Count(kv => kv.CanContainInlineWidgets) > 1))
             {
@@ -266,8 +267,21 @@ namespace KX12To13Converter.Base.Classes.PortalEngineToPageBuilder
             var portalToMVCEventArgs = context.portalToMVCEventArgs;
             var existingPBEditableAreas = context.existingPBEditableAreas;
 
-            // Loop through webparts zones
-            foreach (var peZoneEditableArea in portalToMVCEventArgs.PortalEngineData.TemplateZones)
+            var templateZonesToIndex = new List<KeyValuePair<string, int>>();
+            if (templateConfig != null && templateConfig.Zones.Any())
+            {
+                for (int i = 0; i < templateConfig.Zones.Count; i++)
+                {
+                    templateZonesToIndex.Add(new KeyValuePair<string, int>(templateConfig.Zones[i].PE_WebpartZoneName.ToLower(), i));
+                }
+            }
+
+            // Loop through webparts zones, ordering by if they are found in the template and the index of the template zones
+            foreach (var peZoneEditableArea in portalToMVCEventArgs.PortalEngineData.TemplateZones.OrderBy(x =>
+            {
+                var match = templateZonesToIndex.Where(t => t.Key.Equals(GetPEZoneID(x), StringComparison.OrdinalIgnoreCase));
+                return match.Any() ? match.First().Value : 100;
+            }))
             {
                 HandleWebpartZone(peZoneEditableArea, templateConfig, context);
                 if (portalToMVCEventArgs.Handled)
@@ -661,7 +675,7 @@ namespace KX12To13Converter.Base.Classes.PortalEngineToPageBuilder
         private void ProcessWidgetExecute(PortalToMVCProcessDocumentPrimaryEventArgs portalToMVCEventArgs, PortalWidget peWidget, WidgetConfiguration pbWidget)
         {
             var webpartInstance = peWidget.Widget;
-            if(webpartInstance.WebPartType.Equals("widget", StringComparison.OrdinalIgnoreCase) && webpartInstance.CurrentVariantInstance != null)
+            if (webpartInstance.WebPartType.Equals("widget", StringComparison.OrdinalIgnoreCase) && webpartInstance.CurrentVariantInstance != null)
             {
                 webpartInstance = webpartInstance.CurrentVariantInstance;
             }
@@ -884,17 +898,18 @@ namespace KX12To13Converter.Base.Classes.PortalEngineToPageBuilder
         {
             int templateId = document.DocumentPageTemplateID > 0 ? document.DocumentPageTemplateID : document.NodeTemplateID;
             var checkDoc = document;
-            if(templateId == 0)
+            if (templateId == 0)
             {
-                while(checkDoc != null && checkDoc.NodeInheritPageTemplate && templateId == 0)
+                while (checkDoc != null && checkDoc.NodeInheritPageTemplate && templateId == 0)
                 {
                     checkDoc = checkDoc.Parent;
-                    if(checkDoc != null) { 
+                    if (checkDoc != null)
+                    {
                         templateId = checkDoc.DocumentPageTemplateID > 0 ? checkDoc.DocumentPageTemplateID : checkDoc.NodeTemplateID;
                     }
                 }
             }
-            
+
             var template = GetGeneralTemplateConfiguration(templateId);
 
             // Can't proceed if no template found
@@ -1090,7 +1105,7 @@ namespace KX12To13Converter.Base.Classes.PortalEngineToPageBuilder
                     }
 
                     var parentControl = findSectionEventArgs.ParentLayoutWebpart;
-                    
+
                     // Skip this if there are any layout webparts that aren't in the controlIdsToCheck, must do bottom level first only
                     if (widgetGeneratedZone.WebParts.Any(wp =>
                         allLayoutWebPartControlIDs.Contains(wp.ControlID.ToLowerInvariant())
@@ -1386,21 +1401,81 @@ namespace KX12To13Converter.Base.Classes.PortalEngineToPageBuilder
             }
             else if (conversionKey.InlineWidgetMode.Equals("SPLIT", StringComparison.OrdinalIgnoreCase))
             {
+                // Handle special case where the inline widgets are at the end as well
+                bool contentBeforeInline = false;
+                bool contentAfterInline = false;
+                bool inlineHit = false;
+
+                var isInlineAndConvertedWidgetList = new List<Tuple<bool, PortalWidget>>();
                 // Split into the Static html widgets
                 foreach (var inlineWidgetPortion in inlineWidgetPortions)
                 {
                     if (inlineWidgetPortion.IsInlineWidget)
                     {
-                        widgets.Add(GetBasicWidgetToPortalWidget(eventArgs, inlineWidgetPortion.WidgetInstance, editableWebParts));
+                        inlineHit = true;
+                        isInlineAndConvertedWidgetList.Add(new Tuple<bool, PortalWidget>(true, GetBasicWidgetToPortalWidget(eventArgs, inlineWidgetPortion.WidgetInstance, editableWebParts)));
                     }
                     else
                     {
-                        widgets.Add(new PortalWidget()
+                        
+                        try
                         {
-                            WidgetType = WebpartType.Webpart,
-                            Widget = GetStaticTextWidgetInstance(eventArgs, widget, inlineWidgetPortion.Value),
-                        });
+                            // Try closing the document tags
+                            var doc = new HtmlAgilityPack.HtmlDocument();
+                            doc.LoadHtml(inlineWidgetPortion.Value);
+                            var fixedHtml = doc.DocumentNode.OuterHtml;
+                            if (!string.IsNullOrWhiteSpace(Regex.Replace(doc.DocumentNode.InnerText, @"\s+", "")))
+                            {
+                                if (!inlineHit)
+                                {
+                                    contentBeforeInline = true;
+                                } else
+                                {
+                                    contentAfterInline = true;
+                                }
+                                isInlineAndConvertedWidgetList.Add(new Tuple<bool, PortalWidget>(false, new PortalWidget()
+                                {
+                                    WidgetType = WebpartType.Webpart,
+                                    Widget = GetStaticTextWidgetInstance(eventArgs, widget, fixedHtml),
+                                }));
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            // Add as static widget
+                            isInlineAndConvertedWidgetList.Add(new Tuple<bool, PortalWidget>(false, new PortalWidget()
+                            {
+                                WidgetType = WebpartType.Webpart,
+                                Widget = GetStaticTextWidgetInstance(eventArgs, widget, inlineWidgetPortion.Value)
+                            }));
+                        }
                     }
+                }
+                // If the inline widget was first, then content, or the inline widget was last and no more content, then adjust original widget to just be it's normal HTML, and then add the inline widgets before/after
+                if (!(contentBeforeInline && contentAfterInline))
+                {
+                    var portalWidget = GetBasicWidgetToPortalWidget(eventArgs, widget, editableWebParts);
+                    // If it's an editable text type, then put in adjusted content
+                    if (!string.IsNullOrWhiteSpace(portalWidget.EditableText))
+                    {
+                        portalWidget.EditableText = inlineWidgetPortions.Where(x => !x.IsInlineWidget).Select(x => x.Value).Join("").Trim();
+                    }
+
+                    if (contentBeforeInline)
+                    {
+                        widgets.Add(portalWidget);
+                        widgets.AddRange(isInlineAndConvertedWidgetList.Where(x => x.Item1).Select(x => x.Item2));
+                    }
+                    else
+                    {
+                        widgets.AddRange(isInlineAndConvertedWidgetList.Where(x => x.Item1).Select(x => x.Item2));
+                        widgets.Add(portalWidget);
+                    }
+                }
+                else
+                {
+                    // Add them in order
+                    widgets.AddRange(isInlineAndConvertedWidgetList.Select(x => x.Item2));
                 }
             }
             else
@@ -1438,7 +1513,7 @@ namespace KX12To13Converter.Base.Classes.PortalEngineToPageBuilder
             string expression = m.Groups["macro"].ToString();
             Hashtable parameters = null;
 
-            string controlName = expression;
+            string controlName = string.Empty;
             string controlParameter = null;
 
             // Old macro %%control:name?parameter%%
@@ -1448,30 +1523,26 @@ namespace KX12To13Converter.Base.Classes.PortalEngineToPageBuilder
                 int queryIndex = expression.IndexOf("?", StringComparison.Ordinal);
                 if (queryIndex >= 0)
                 {
-                    controlParameter = expression.Substring(queryIndex + 1);
+                    expression = expression.Substring(queryIndex + 1);
                     controlName = expression.Substring(0, queryIndex);
                 }
             }
-            // New macro {^name|(param1)value^}
-            else
-            {
-                // Parse inline parameters
-                parameters = ParseInlineParameters(expression, ref controlParameter, ref controlName);
-            }
+
+            // Parse inline parameters
+            parameters = ParseInlineParameters(expression, ref controlParameter, ref controlName);
+
 
             // Could not find a name to the inline widget, ignore.
-            if (!parameters.ContainsKey("name") && string.IsNullOrWhiteSpace(controlName))
+            if (string.IsNullOrWhiteSpace(controlName))
             {
                 return null;
             }
 
-            var webpartName = !string.IsNullOrWhiteSpace(controlName) ? controlName : parameters["name"].ToString();
-
             var inlineInstance = new WebPartInstance()
             {
-                ControlID = $"inlinewidget_{webpartName}_{Guid.NewGuid().ToString()}",
+                ControlID = $"inlinewidget_{controlName}_{Guid.NewGuid()}",
                 InstanceGUID = Guid.NewGuid(),
-                WebPartType = webpartName,
+                WebPartType = controlName,
                 IsWidget = true,
                 Minimized = false,
                 CurrentVariantInstance = originWidgetInstance,
@@ -1493,7 +1564,7 @@ namespace KX12To13Converter.Base.Classes.PortalEngineToPageBuilder
             }
             return new InlineWidgetPortion()
             {
-                WidgetName = webpartName,
+                WidgetName = controlName,
                 WidgetInstance = inlineInstance,
                 IsInlineWidget = true,
                 Value = inlineWidgetVal
@@ -1538,20 +1609,22 @@ namespace KX12To13Converter.Base.Classes.PortalEngineToPageBuilder
                         string parameterName = parameter.Substring(nameStart, nameEnd - nameStart);
                         string parameterValue = parameter.Substring(nameEnd + 1);
 
-                        parameters[parameterName] = MacroProcessor.UnescapeParameterValue(parameterValue);
+                        parameters[parameterName] = HttpUtility.UrlDecode(HTMLHelper.HTMLDecode(MacroProcessor.UnescapeParameterValue(parameterValue).Replace("+"," ")));
                     }
                     else
                     {
                         // Unnamed parameter - default one
-                        controlParameter = MacroProcessor.UnescapeParameterValue(parameter);
+                        controlParameter = HttpUtility.UrlDecode(HTMLHelper.HTMLDecode(MacroProcessor.UnescapeParameterValue(parameter).Replace("+", " ")));
                     }
 
                     // Get next parameter
                     expression = expression.Substring(0, paramIndex);
                     paramIndex = expression.LastIndexOf("|", StringComparison.Ordinal);
                 }
-
-                controlName = expression;
+                if(string.IsNullOrWhiteSpace(controlName) && parameters.ContainsKey("name"))
+                {
+                    controlName = ValidationHelper.GetString(parameters["name"], string.Empty);
+                }
 
                 return parameters;
             }
@@ -1582,7 +1655,7 @@ namespace KX12To13Converter.Base.Classes.PortalEngineToPageBuilder
                 Removed = false,
                 VariantMode = VariantModeEnum.None
             };
-            staticInstance.SetValue("Text", value);
+            staticInstance.SetValue("Text", value.Trim());
             return staticInstance;
 
         }

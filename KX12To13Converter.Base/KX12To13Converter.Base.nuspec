@@ -2,7 +2,7 @@
 <package >
   <metadata>
     <id>KX12To13Converter.Base</id>
-    <version>12.29.16</version>
+    <version>12.29.17</version>
     <authors>Trevor Fayas</authors>
     <owners>Trevor Fayas</owners>
     <license type="expression">MIT</license>
@@ -10,7 +10,7 @@
     <iconUrl>https://avatars.githubusercontent.com/u/58479377?v=4</iconUrl>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
     <description>Implementation of the KX12To13Converter.Shared interfaces, needed with the KX12To13Converter.Admin package (unless you wish to use the source code, in which case pull down the KX12To13Converter.Base project from github and include it in your Kentico Xperience 12 admin solution).</description>
-    <releaseNotes>Fixed SQL error (missing ) )</releaseNotes>
+    <releaseNotes>Fixed major bug with Inline Widget Rendering.  Updated Inline Rendering logic to detect inline widgets at begin/end and simply move them to beginning/end, and better handles closing / opening HTML tags after splitting to ensure no broken HTML structures.</releaseNotes>
     <copyright>Copyright 2022</copyright>
     <tags>Kentico Xperience, KX12, Kentico 12, Xperience 13, Upgrade, Converter</tags>
 <dependencies>

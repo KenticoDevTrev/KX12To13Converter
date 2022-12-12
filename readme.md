@@ -1,5 +1,6 @@
 
 
+
 # Kentico Xperience 12 Portal to Kentico Xperience 13 Converter
 This tool allows you to convert  your portal engine site to a KX13 upgradeable instance.
 
@@ -98,8 +99,8 @@ PortalToMVCEvents.ProcessSection.After += ProcessSection_After_BootstrapLayout.P
 Below are some nuances of the conversion processes:
 * Since Portal Engine allows for any number of nested widget zones, and Page Builder does not, only the parent layout widget will be parsed into a section around the widgets.  Any ancestor layouts are listed in the ProcessWidget's event arguments if you need further adjustments.
 * EditableText and EditableImages in the page templates are treated as Webpart Zones and a default section and Text/Image widget is placed within it.
-* Since Inline Widgets do not exist in KX13, you can configure these to Ignore, Split, Wrap, or Add After (details on the Widget Configuration UI Step).
-* You can parse multiple zones into a single Editable Area if you wish.
+* Since Inline Widgets do not exist in KX13, you can configure these to Ignore, Split, Wrap, or Add After (details on the Widget Configuration UI Step).  The Configurator has been updated to handle Split better, where it will detect inline widgets added at the END or BEGINNING of a rich text area and simply put them before / after the html content.  It will also, upon splitting, automatically resolve split end/start HTML tags to ensure the split out content is not broken HTML.  
+* You can parse multiple zones into a single Editable Area if you wish.  The configuration has been updated to honor the **editable area order** in the configuration when mapping to a single zone, so if you combine "TopZone", "MiddleZone", and "BottomZone" into a single editable area, just make sure that they are defined in the Widget Configuration in that order.
 
 # GUIDE ON UPGRADING
 The [Wiki](https://github.com/KenticoDevTrev/KX12To13Converter/wiki) has an in depth guide to using this tool, and what to do during upgrade.  Please read this and follow along!
