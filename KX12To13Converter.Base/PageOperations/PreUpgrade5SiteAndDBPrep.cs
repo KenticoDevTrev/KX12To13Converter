@@ -169,6 +169,7 @@ IF OBJECT_ID('dbo.FK_CMS_CssStylesheetSite_StylesheetID_CMS_CssStylesheet', 'F')
 alter table CMS_CssStyleSheetSite drop constraint FK_CMS_CssStylesheetSite_StylesheetID_CMS_CssStylesheet
 END
 
+update CMS_Site set SiteDefaultStyleSheetID = null
 delete from  CMS_CssStylesheetSite
 delete from [CMS_CssStylesheet]
             ";
@@ -227,6 +228,8 @@ DELETE FROM [CMS_MetaFile]
 	)
 
 	delete from CMS_PageTemplateScope where PageTemplateScopeTemplateID in (SELECT PageTemplateID FROM @oldTemplates)
+
+    delete from OM_PersonalizationVariant where VariantPageTemplateID in (Select PageTemplateID from @oldTemplates)
 
 DELETE FROM [CMS_PageTemplate]
 	WHERE [PageTemplateID] IN (SELECT PageTemplateID FROM @oldTemplates)

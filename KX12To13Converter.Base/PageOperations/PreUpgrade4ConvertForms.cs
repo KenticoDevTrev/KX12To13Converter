@@ -53,6 +53,24 @@ namespace KX12To13Converter.Base.PageOperations
                     var settingsNode = fieldNode.SelectSingleNode("./settings");
                     var componentidentifierNode = xmlDoc.CreateNode(XmlNodeType.Element, "componentidentifier", xmlDoc.NamespaceURI);
                     componentidentifierNode.InnerText = oldToNew[oldName.ToLower()];
+                    
+                    // handle error in the Convert Forms default Components where i put the class name instead of the identity
+                    switch (componentidentifierNode.InnerText)
+                    {
+                        case "CheckBoxComponent":
+                        case "DropDownComponent":
+                        case "EmailInputComponent":
+                        case "TextAreaComponent":
+                        case "RadioButtonsComponent":
+                        case "MultipleChoiceComponent":
+                        case "RecaptchaComponent":
+                        case "TextInputComponent":
+                        case "FileUploaderComponent":
+                        case "USPhoneComponent":
+                            componentidentifierNode.InnerText = $"Kentico.{componentidentifierNode.InnerText.Replace("Component", "")}";
+                            break;
+                    }
+
                     settingsNode.AppendChild(componentidentifierNode);
                 }
                 formBuilderJson += string.Join(",", formElements);
