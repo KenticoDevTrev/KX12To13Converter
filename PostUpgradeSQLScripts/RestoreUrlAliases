@@ -1,0 +1,44 @@
+-- Replace KX13UPGRADEDDB with the upgraded DB and KX12PREUPGRADEDDB with the KX12 pre-upgraded DB
+-- This will add any Alternative Urls, as well as add any hard-set DocumentUrlPath's as an Alias.  
+-- In KX13 you do not have the ability to set the Full Url path to whatever you want as a primary Url, so it's added
+-- as an Alias.
+
+insert into  KX13UPGRADEDDB.dbo.CMS_AlternativeUrl
+
+
+select * from (
+select NEWID() as AlternativeUrlGuid,
+(select top 1 VT2.DocumentID from KX12PREUPGRADEDDB.dbo.CMS_DocumentAlias as DA2 inner join KX12PREUPGRADEDDB.dbo.View_CMS_Tree_Joined VT2 on VT2.NodeID = DA2.AliasNodeID and VT2.DocumentCulture = Coalesce(NULLIF(DA2.AliasCulture, ''), 'en-US') where DA2.AliasURLPath = '/'+DA1.AliasURLPath )  as AlternativeUrlDocumentID,
+(select top 1 VT2.NodeSiteID from KX12PREUPGRADEDDB.dbo.CMS_DocumentAlias as DA2 inner join KX12PREUPGRADEDDB.dbo.View_CMS_Tree_Joined VT2 on VT2.NodeID = DA2.AliasNodeID and VT2.DocumentCulture = Coalesce(NULLIF(DA2.AliasCulture, ''), 'en-US') where DA2.AliasURLPath = '/'+DA1.AliasURLPath )  as AlternativeUrlSiteID,
+ AliasUrlPath,
+(select top 1 DA2.AliasLastModified from KX12PREUPGRADEDDB.dbo.CMS_DocumentAlias as DA2 inner join KX12PREUPGRADEDDB.dbo.View_CMS_Tree_Joined VT2 on VT2.NodeID = DA2.AliasNodeID and VT2.DocumentCulture = Coalesce(NULLIF(DA2.AliasCulture, ''), 'en-US') where DA2.AliasURLPath = '/'+DA1.AliasURLPath )  as AlternativeUrlLastModified
+from (select distinct RIGHT(DA1.AliasURLPath, LEN(DA1.AliasURLPath) - 1) as AliasUrlPath from KX12PREUPGRADEDDB.dbo.CMS_DocumentAlias as DA1) DA1
+) item where Item.AlternativeUrlDocumentID in (Select DocumentID from KX13UPGRADEDDB.dbo.View_CMS_Tree_Joined) and AliasUrlPath not in (Select PageUrlPathUrlPath from KX13UPGRADEDDB.dbo.CMS_PageUrlPath)
+
+GO;
+
+
+insert into  KX13UPGRADEDDB.dbo.CMS_AlternativeUrl
+
+select * from (
+select NEWID() as AlternativeUrlGuid,
+(select top 1 DA2.DocumentID from KX12PREUPGRADEDDB.dbo.View_CMS_Tree_Joined as DA2 where DA2.DocumentUrlPath = '/'+DA1.AliasURLPath order by DocumentID )  as AlternativeUrlDocumentID,
+(select top 1 DA2.NodeSiteID from KX12PREUPGRADEDDB.dbo.View_CMS_Tree_Joined as DA2 where DA2.DocumentUrlPath = '/'+DA1.AliasURLPath order by DocumentID )  as AlternativeUrlSiteID,
+AliasUrlPath,
+GETDATE() as AlternativeUrlLastModified
+from 
+
+(
+	select distinct RIGHT(DocumentUrlPath, LEN(DocumentUrlPath) - 1) as AliasUrlPath from KX12PREUPGRADEDDB.dbo.VIew_CMS_Tree_Joined where DocumentUrlPath <> NodeAliasPath and NULLIF(DocumentUrlPath, '') is not null
+) DA1 
+) DA2
+
+where AliasUrlPath not in (
+Select PU.PageUrlPathUrlPath from KX13UPGRADEDDB.dbo.CMS_PageUrlPath PU where PU.PageUrlPathUrlPath is not null
+UNION ALL
+select AU.AlternativeUrlUrl from KX13UPGRADEDDB.dbo.CMS_AlternativeUrl AU where AU.AlternativeUrlUrl is not null
+)
+and AlternativeUrlDocumentID in (select LD.DocumentID from KX13UPGRADEDDB.dbo.CMS_Document LD)
+order by AliasUrlPath
+
+
