@@ -74,7 +74,7 @@ namespace KX12To13Converter.Events
                         }
                         if (value.Contains("-xs"))
                         {
-                            value = value.Replace("-xs", "-md");
+                            value = value.Replace("-xs", "-sm");
                         }
                     }
 
@@ -100,7 +100,26 @@ namespace KX12To13Converter.Events
                             {
                                 if (match.Success)
                                 {
-                                    value = value.Replace(match.Value, $"d-{match.Groups[2].Value}-none").Replace("d-xs-none", "d-none");
+                                    // Handle new d-block
+                                    switch (match.Groups[2].Value.ToLower())
+                                    {
+                                        case "xs":
+                                            // Can't hit since it was replaced above
+                                            break;
+                                        case "sm":
+                                            // Special case since xs is now sm
+                                            value = value.Replace(match.Value, $"d-none d-sm-block");
+                                            break;
+                                        case "md":
+                                            value = value.Replace(match.Value, $"d-md-none d-lg-block");
+                                            break;
+                                        case "lg":
+                                            value = value.Replace(match.Value, $"d-lg-none d-xl-block");
+                                            break;
+                                        case "xl":
+                                            value = value.Replace(match.Value, $"d-xl-none");
+                                            break;
+                                    }
                                 }
                             }
 
@@ -111,6 +130,28 @@ namespace KX12To13Converter.Events
                                 if (match.Success)
                                 {
                                     var size = match.Groups[2].Value;
+                                    // Handle new d-block
+                                    switch (match.Groups[2].Value.ToLower())
+                                    {
+                                        case "xs":
+                                            // Can't hit since it was replaced above
+                                            break;
+                                        case "sm":
+                                            // Special case for how "xs" is now "sm" for bootstrap 3
+                                            value = value.Replace(match.Value, $"d-block d-md-none");
+                                            break;
+                                        case "md":
+                                            value = value.Replace(match.Value, $"d-none d-md-block d-lg-none");
+                                            break;
+                                        case "lg":
+                                            value = value.Replace(match.Value, $"d-none d-lg-block d-xl-none");
+                                            break;
+                                        case "xl":
+                                            // Also a special case since there is no xxl so just keep xl as large
+                                            value = value.Replace(match.Value, $"d-none d-xl-block");
+                                            break;
+                                    }
+
                                     var nextSize = size.Replace("lg", "xl").Replace("md", "lg").Replace("sm", "md").Replace("xs", "sm");
                                     value = value.Replace(match.Value, $"d-none d-{size}-block d-{nextSize}-none")
                                         .Replace("d-none d-xs-block d-sm-none", "d-block d-sm-none");
