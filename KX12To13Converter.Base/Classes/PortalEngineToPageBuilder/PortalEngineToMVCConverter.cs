@@ -990,33 +990,31 @@ namespace KX12To13Converter.Base.Classes.PortalEngineToPageBuilder
 
             var allTemplateZoneIds = eventArgs.PortalEngineData.TemplateZones.Where(x => x.WebpartZoneInstance != null).Select(x => x.WebpartZoneInstance.ZoneID.ToLowerInvariant());
             var allLayoutWebparts = pageTemplateInstance.WebPartZones.SelectMany(x => x.WebParts.Where(y => LayoutWidgetDictionary.Keys.Any(z => z.Equals(y.WebPartType, StringComparison.OrdinalIgnoreCase))));
-            var allLayoutWebpartNames = allLayoutWebparts.Select(x => x.WebPartType);
+            var allLayoutWebpartNames = allLayoutWebparts.Select(x => x.WebPartType).ToList();
+
+            var allNonLayoutWebparts = pageTemplateInstance.WebPartZones.SelectMany(x => x.WebParts.Where(y => !LayoutWidgetDictionary.Keys.Any(z => z.Equals(y.WebPartType, StringComparison.OrdinalIgnoreCase))));
+            var allNonLayoutWebpartsNames = allNonLayoutWebparts.Select(x => x.WebPartType);
+
+            List<string> fakeLayoutControlIds = new List<string>();
             Dictionary<string, List<PortalWidgetSection>> parentControlIDToPortalWidgetSections = new Dictionary<string, List<PortalWidgetSection>>();
 
-            // loop through all layout widget derived zones with NO layout widgets within them, this is the "bottom" level
-            foreach (var zone in pageTemplateInstance.WebPartZones.Where(x => !allTemplateZoneIds.Contains(x.ZoneID.ToLowerInvariant()) && !x.WebParts.Any(y => allLayoutWebpartNames.Contains(y.WebPartType, StringComparer.OrdinalIgnoreCase)))
+            Dictionary<string, int> MultiZoneSectionWithCurrentZoneCount = new Dictionary<string, int>();
+
+            List<string> ZoneIdsWithNoParent = new List<string>();
+            
+            // Build Zone and Parent Control ID Dictionaries
+            Dictionary<string, List<string>> parentControlIDToZoneIDs = new Dictionary<string, List<string>>();
+            Dictionary<string, string> zoneIdToParentControlID = new Dictionary<string, string>();
+            Dictionary<string, WebPartInstance> zoneIdToParentControl = new Dictionary<string, WebPartInstance>();
+            Dictionary<string, string> controlIdToParentControlID = new Dictionary<string, string>();
+            Dictionary<string, string> controlIdToZoneId = new Dictionary<string, string>();
+           
+            foreach (var zone in pageTemplateInstance.WebPartZones.Where(x => !allTemplateZoneIds.Contains(x.ZoneID.ToLowerInvariant()))
                 .OrderBy(x => x.ZoneID))
             {
-                PortalToMVCBuildPageFindSectionWebpartEventArgs findSectionEventArgs = new PortalToMVCBuildPageFindSectionWebpartEventArgs(zone, allLayoutWebparts)
-                {
-                    ParentLayoutWebpart = null
-                };
-
-                // ProcessPage.Before
-                using (var findParentSectionWebpart = PortalToMVCEvents.FindParentSectionWebpart.StartEvent(findSectionEventArgs))
-                {
-                    if (!findSectionEventArgs.Handled)
-                    {
-                        // Go by parent control next
-                        var zoneArray = zone.ZoneID.Split('_');
-                        var parentControlIDlookup = zoneArray.Take(zoneArray.Length - 1).Join("_").ToLowerInvariant();
-                        var sectionWebpart = allLayoutWebparts.Where(x => x.ControlID.Equals(parentControlIDlookup, StringComparison.OrdinalIgnoreCase)).FirstOrDefault();
-                        findSectionEventArgs.ParentLayoutWebpart = sectionWebpart;
-                    }
-
-                    // ProcessPage.After
-                    findParentSectionWebpart.FinishEvent();
-                }
+                string zoneId = zone.ZoneID.ToLowerInvariant();
+                // Get parent control ID
+                PortalToMVCBuildPageFindSectionWebpartEventArgs findSectionEventArgs = FindParentSection(zone, allLayoutWebparts);
 
                 if (findSectionEventArgs.ParentLayoutWebpart == null)
                 {
@@ -1028,95 +1026,263 @@ namespace KX12To13Converter.Base.Classes.PortalEngineToPageBuilder
                         Type = "OrphanedWebpartZone",
                         Description = $"Could not find parent for zone {zone.ZoneID} among all the layout webparts ({allLayoutWebparts.Select(x => x.ControlID).Join(", ")})."
                     });
+                    ZoneIdsWithNoParent.Add(zone.ZoneID.ToLowerInvariant());
+                }
+
+                string parentControlId = findSectionEventArgs.ParentLayoutWebpart != null ? findSectionEventArgs.ParentLayoutWebpart.ControlID.ToLowerInvariant() : findSectionEventArgs.ParentControlID.ToLowerInvariant();
+
+                if (!parentControlIDToZoneIDs.ContainsKey(parentControlId))
+                {
+                    parentControlIDToZoneIDs.Add(parentControlId, new List<string>());
+                }
+                parentControlIDToZoneIDs[parentControlId].Add(zoneId);
+                zoneIdToParentControlID.Add(zoneId, parentControlId);
+                zoneIdToParentControl.Add(zoneId, findSectionEventArgs.ParentLayoutWebpart);
+                zone.WebParts.ForEach(x => controlIdToParentControlID.Add(x.ControlID.ToLowerInvariant(), parentControlId));
+                zone.WebParts.ForEach(x => controlIdToZoneId.Add(x.ControlID.ToLowerInvariant(), zoneId));
+            }
+
+            // loop through all layout widgets that have both layout widgets and non layout widgets, and wrap the non layout widgets in a fake default layout widget.
+            foreach (var zone in pageTemplateInstance.WebPartZones.Where(x => 
+                !ZoneIdsWithNoParent.Contains(x.ZoneID.ToLowerInvariant()) 
+                && !allTemplateZoneIds.Contains(x.ZoneID.ToLowerInvariant()) 
+                && x.WebParts.Any(y => allNonLayoutWebpartsNames.Contains(y.WebPartType, StringComparer.OrdinalIgnoreCase)) 
+                && x.WebParts.Any(y => allLayoutWebpartNames.Contains(y.WebPartType, StringComparer.OrdinalIgnoreCase))
+                )
+                .OrderBy(x => x.ZoneID))
+            {
+                string zoneId = zone.ZoneID.ToLowerInvariant();
+                List<WebPartInstance> newWebpartInstanceList = new List<WebPartInstance>();
+
+                if (zoneIdToParentControlID.ContainsKey(zone.ZoneID.ToLowerInvariant()))
+                {
+                    string parentControlId = zoneIdToParentControlID[zone.ZoneID.ToLowerInvariant()];
+
+                    foreach (var webpartInstance in zone.WebParts)
+                    {
+                        string webpartInstanceControlId = webpartInstance.ControlID.ToLowerInvariant();
+                        if (allLayoutWebpartNames.Contains(webpartInstance.WebPartType, StringComparer.OrdinalIgnoreCase))
+                        {
+                            newWebpartInstanceList.Add(webpartInstance);
+                        }
+                        else if (allNonLayoutWebpartsNames.Contains(webpartInstance.WebPartType, StringComparer.OrdinalIgnoreCase))
+                        {
+                            // Add to the layout webpart names
+                            if (!allLayoutWebpartNames.Contains("DEFAULT_SECTION"))
+                            {
+                                allLayoutWebpartNames.Add("DEFAULT_SECTION");
+                            }
+
+                            // fake a layout widget then add that fake.
+                            var fakeControlID = $"default_section_{Guid.NewGuid().ToString().Replace("-", "")}".ToLowerInvariant();
+                            var fakeWebpartInstance = new WebPartInstance()
+                            {
+                                WebPartType = "DEFAULT_SECTION",
+                                ControlID = fakeControlID,
+                                ParentZone = zone,
+                            };
+                            fakeLayoutControlIds.Add(fakeControlID);
+                            newWebpartInstanceList.Add(fakeWebpartInstance);
+
+                            // Adjust control to parent dictionaries
+                            controlIdToParentControlID.Remove(webpartInstanceControlId);
+                            controlIdToParentControlID.Add(webpartInstanceControlId, fakeControlID);
+                            controlIdToParentControlID.Add(fakeControlID, parentControlId);
+                            
+
+                            // Add the fake section to the webpart zones of the page template instance
+                            string fakeZoneID = fakeControlID + "_1";
+                            pageTemplateInstance.WebPartZones.Add(new WebPartZoneInstance()
+                            {
+                                ZoneID = fakeZoneID,
+                                WebParts = new List<WebPartInstance>() { webpartInstance }
+                            });
+
+                            controlIdToZoneId.Remove(webpartInstanceControlId);
+                            controlIdToZoneId.Add(webpartInstanceControlId, fakeZoneID);
+                            controlIdToZoneId.Add(fakeControlID, zoneId);
+
+                            // Add to primary dictionaries
+                            parentControlIDToZoneIDs.Add(fakeControlID, new List<string>() { fakeZoneID });
+                            zoneIdToParentControlID.Add(fakeZoneID, fakeControlID);
+                        }
+                    }
+
+                    // Add back the webpart zones
+                    zone.WebParts = newWebpartInstanceList;
+                }
+            }
+
+            // loop through any layout widgets now that have section with only layouts and sections only non-layout, and make the non-layout also fake sections
+            var parentControlIdToZoneIDKeys = parentControlIDToZoneIDs.Keys.ToArray();
+            foreach (var parentControlId in parentControlIdToZoneIDKeys)
+            {
+                bool hasZonesWithOnlyLayout = pageTemplateInstance.WebPartZones.Any(x => 
+                    parentControlIDToZoneIDs[parentControlId].Contains(x.ZoneID.ToLowerInvariant())
+                    && x.WebParts.Any() 
+                    && x.WebParts.All(y => allLayoutWebpartNames.Contains(y.WebPartType, StringComparer.OrdinalIgnoreCase))
+                );
+                if (hasZonesWithOnlyLayout)
+                {
+                    var zonesNeedingLayoutWrapper = pageTemplateInstance.WebPartZones.Where(x =>
+                        parentControlIDToZoneIDs[parentControlId].Contains(x.ZoneID.ToLowerInvariant())
+                        && (!x.WebParts.Any() || x.WebParts.All(y => allNonLayoutWebpartsNames.Contains(y.WebPartType, StringComparer.OrdinalIgnoreCase)))).ToArray();
+                    for(int i=0; i< zonesNeedingLayoutWrapper.Length; i++)
+                    {
+                        var zoneNeedingLayoutWrapper = zonesNeedingLayoutWrapper[i];
+                        // Add to the layout webpart names
+                        if (!allLayoutWebpartNames.Contains("DEFAULT_SECTION"))
+                        {
+                            allLayoutWebpartNames.Add("DEFAULT_SECTION");
+                        }
+
+                        // fake a layout widget then add that fake.
+                        var fakeControlID = $"default_section_{Guid.NewGuid().ToString().Replace("-", "")}".ToLowerInvariant();
+                        var fakeWebpartInstance = new WebPartInstance()
+                        {
+                            WebPartType = "DEFAULT_SECTION",
+                            ControlID = fakeControlID,
+                            ParentZone = zoneNeedingLayoutWrapper,
+                        };
+                        fakeLayoutControlIds.Add(fakeControlID);
+
+
+                        // Add the fake section to the webpart zones of the page template instance
+                        string fakeZoneID = fakeControlID + "_1";
+                        pageTemplateInstance.WebPartZones.Add(new WebPartZoneInstance()
+                        {
+                            ZoneID = fakeZoneID,
+                            WebParts = zoneNeedingLayoutWrapper.WebParts
+                        });
+
+                        // Adjust control to parent dictionaries
+                        zoneNeedingLayoutWrapper.WebParts.ForEach(x =>
+                        {
+                            controlIdToParentControlID.Remove(x.ControlID.ToLowerInvariant());
+                            controlIdToParentControlID.Add(x.ControlID.ToLowerInvariant(), fakeControlID);
+                            controlIdToZoneId.Remove(x.ControlID.ToLowerInvariant());
+                            controlIdToZoneId.Add(x.ControlID.ToLowerInvariant(), fakeZoneID);
+                        });
+                        controlIdToZoneId.Add(fakeControlID, zoneNeedingLayoutWrapper.ZoneID.ToLowerInvariant());
+
+                        // Set zone to just the new fake webpart instance
+                        zoneNeedingLayoutWrapper.WebParts = new List<WebPartInstance>() { fakeWebpartInstance };
+
+                        // Add to primary dictionaries
+                        parentControlIDToZoneIDs.Add(fakeControlID, new List<string>() { fakeZoneID });
+                        zoneIdToParentControlID.Add(fakeZoneID, fakeControlID);
+                    }
+                }
+            }
+
+
+            /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+            // At this point, each widget zone has either NO layout sections, or has a Layout Section with either ONLY widgets or ONLY Layout Sections within them.   ///
+            // This means that we should be able to processes only Widget Zones that have NO Layouts in them 
+            /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+            // loop through all layout widget derived zones
+            foreach (var zone in pageTemplateInstance.WebPartZones.Where(x => 
+                !ZoneIdsWithNoParent.Contains(x.ZoneID.ToLowerInvariant()) 
+                && !allTemplateZoneIds.Contains(x.ZoneID.ToLowerInvariant())
+                && zoneIdToParentControlID.ContainsKey(x.ZoneID.ToLowerInvariant())
+                )
+                .OrderBy(x => x.ZoneID)
+            )
+            {
+                string zoneId = zone.ZoneID.ToLowerInvariant();
+                
+                string parentControlID = zoneIdToParentControlID[zoneId];
+                WebPartInstance parentWebpartInstance = zoneIdToParentControl.ContainsKey(zoneId) ? zoneIdToParentControl[zoneId] : null;
+                bool isDefaultSection = parentWebpartInstance == null;
+
+                // Add to the found zone list
+                documentZonesFound.Add(zoneId);
+
+                // If this webpart zone is only Layouts, then add to ControlIDs with Layout Children and skip, this is not a "bottom Level"
+                if (zone.WebParts.Any() && zone.WebParts.All(y => allLayoutWebpartNames.Contains(y.WebPartType, StringComparer.OrdinalIgnoreCase)))
+                {
                     continue;
                 }
 
-                // Add to the found zone list
-                documentZonesFound.Add(findSectionEventArgs.ChildZone.ZoneID.ToLower());
-
-                string parentControlID = findSectionEventArgs.ParentLayoutWebpart.ControlID.ToLowerInvariant();
+                // Processes bottom level
                 if (!parentControlIDToPortalWidgetSections.ContainsKey(parentControlID))
                 {
                     parentControlIDToPortalWidgetSections.Add(parentControlID, new List<PortalWidgetSection>()
                     {
                         new PortalWidgetSection()
                         {
-                            SectionWidget = findSectionEventArgs.ParentLayoutWebpart,
-                            IsDefault = false,
+                            SectionWidget = parentWebpartInstance,
+                            IsDefault = isDefaultSection,
                             SectionZoneToWidgets = new List<List<PortalWidget>>()
                         }
                     });
                 }
+
                 var section = parentControlIDToPortalWidgetSections[parentControlID][0];
+
+                // Handle "empty" zones before other zones for sections with multiple zones (ex a bootstrap layout with 4 zones, the first empty, the rest have content)
+                if (section != null)
+                {
+                    var count = zone.ZoneID.ToLower().Replace(parentControlID + "_", "");
+                    if (int.TryParse(count, out int zoneNum))
+                    {
+                        if (!MultiZoneSectionWithCurrentZoneCount.ContainsKey(parentControlID))
+                        {
+                            MultiZoneSectionWithCurrentZoneCount.Add(parentControlID, 1);
+                        }
+
+                        int curNum = MultiZoneSectionWithCurrentZoneCount[parentControlID];
+
+                        for (int i = curNum; i < zoneNum; i++)
+                        {
+                                section.SectionZoneToWidgets.Add(new List<PortalWidget>());
+                        }
+                        MultiZoneSectionWithCurrentZoneCount[parentControlID] = zoneNum+1;
+                    }
+                }
+
                 // Add zone to the section
                 section.SectionZoneToWidgets.Add(zone.WebParts.SelectMany(x => GetBasicWidgetToPortalWidgets(eventArgs, x, editableWebParts)).ToList());
-
             }
 
-            // Next, loop through zones found in the parentControlIDToPortalWidget
-            var finalParentControlIdToWidgets = new Dictionary<string, List<PortalWidgetSection>>();
-            var processedParentControlIds = new List<string>();
-            var allLayoutWebPartControlIDs = allLayoutWebparts.Select(x => x.ControlID.ToLowerInvariant());
-
+            var currentLevelProcessedParentControlIds = new List<string>();
+            var allLayoutWebPartControlIDs = allLayoutWebparts.Select(x => x.ControlID.ToLowerInvariant()).Union(fakeLayoutControlIds);
+            var controlIdsToCheck = parentControlIDToPortalWidgetSections.Keys.ToList();
+            List<string> controlIdsChecked = new List<string>();
             // Need to take the parentControlIDToPortalWidget and start combining with any sibling widgets
             bool nextLevelFound = true;
             while (nextLevelFound)
             {
                 nextLevelFound = false;
-                var controlIdsToCheck = parentControlIDToPortalWidgetSections.Keys.Except(processedParentControlIds);
+                // On First Level (0), also exclude any Controls that had Child layouts, even if they also had non child layouts.
 
+                WebPartInstance parentControl;
+                string documentZoneFound = string.Empty;
                 // Get any Webpart Zones that contain these controls and not part of the template zones (AKA are a widget generated zone)
-                foreach (var widgetGeneratedZone in pageTemplateInstance.WebPartZones.Where(x => !allTemplateZoneIds.Contains(x.ZoneID, StringComparer.OrdinalIgnoreCase) && x.WebParts.Any(wp => controlIdsToCheck.Contains(wp.ControlID.ToLowerInvariant()))))
+
+                foreach (var widgetGeneratedZone in pageTemplateInstance.WebPartZones.Where(x =>
+                    zoneIdToParentControlID.ContainsKey(x.ZoneID.ToLowerInvariant())
+                    && !allTemplateZoneIds.Contains(x.ZoneID, StringComparer.OrdinalIgnoreCase) 
+                    && x.WebParts.Any(wp => controlIdsToCheck.Contains(wp.ControlID.ToLowerInvariant())))
+                    )
                 {
-
-                    string parentControlIdLookup = string.Empty;
-                    PortalToMVCBuildPageFindSectionWebpartEventArgs findSectionEventArgs = new PortalToMVCBuildPageFindSectionWebpartEventArgs(widgetGeneratedZone, allLayoutWebparts)
-                    {
-                        ParentLayoutWebpart = null
-                    };
-
-                    // ProcessPage.Before
-                    using (var findParentSectionWebpart = PortalToMVCEvents.FindParentSectionWebpart.StartEvent(findSectionEventArgs))
-                    {
-                        if (!findSectionEventArgs.Handled)
-                        {
-                            // Go by parent control next
-                            var zoneArray = widgetGeneratedZone.ZoneID.Split('_');
-                            parentControlIdLookup = zoneArray.Take(zoneArray.Length - 1).Join("_").ToLowerInvariant();
-                            var sectionWebpart = allLayoutWebparts.Where(x => x.ControlID.Equals(parentControlIdLookup, StringComparison.OrdinalIgnoreCase)).FirstOrDefault();
-                            findSectionEventArgs.ParentLayoutWebpart = sectionWebpart;
-                        }
-
-                        // ProcessPage.After
-                        findParentSectionWebpart.FinishEvent();
-                    }
-
-                    if (findSectionEventArgs.ParentLayoutWebpart == null)
-                    {
-                        // orphan
-                        eventArgs.ConversionNotes.Add(new ConversionNote()
-                        {
-                            IsError = false,
-                            Source = "BuildPortalToMVCProcessDocumentPrimaryEventArgs",
-                            Type = "OrphanedWebpartZone",
-                            Description = $"Could not find parent for zone {widgetGeneratedZone.ZoneID} (lookup {parentControlIdLookup}) among all the layout webparts ({allLayoutWebparts.Select(x => x.ControlID).Join(", ")})."
-                        });
-                        continue;
-                    }
-
-                    var parentControl = findSectionEventArgs.ParentLayoutWebpart;
+                    string zoneId = widgetGeneratedZone.ZoneID.ToLowerInvariant();
+                    string parentControlIdLookup = zoneIdToParentControlID[zoneId];
+                    documentZonesFound.Add(zoneId);
+                    parentControl = zoneIdToParentControl.ContainsKey(zoneId) ? zoneIdToParentControl[zoneId] : null;
 
                     // Skip this if there are any layout webparts that aren't in the controlIdsToCheck, must do bottom level first only
-                    if (widgetGeneratedZone.WebParts.Any(wp =>
+                    var parentsWebpartZones = pageTemplateInstance.WebPartZones.Where(x =>
+                        parentControlIDToZoneIDs[parentControlIdLookup].Contains(x.ZoneID.ToLowerInvariant())
+                        );
+                    if (parentsWebpartZones.SelectMany(x => x.WebParts).Any(wp =>
                         allLayoutWebPartControlIDs.Contains(wp.ControlID.ToLowerInvariant())
-                        && !controlIdsToCheck.Contains(wp.ControlID.ToLowerInvariant()))
+                        && !controlIdsToCheck.Union(controlIdsChecked).Contains(wp.ControlID.ToLowerInvariant()))
                       )
                     {
                         continue;
                     }
-
-                    // This item was found so add it to the found items.
-                    documentZonesFound.Add(findSectionEventArgs.ChildZone.ZoneID.ToLower());
 
                     // At this point is the 'next level'
                     nextLevelFound = true;
@@ -1125,6 +1291,7 @@ namespace KX12To13Converter.Base.Classes.PortalEngineToPageBuilder
                     if (!parentControlIDToPortalWidgetSections.ContainsKey(parentControlIdLookup))
                     {
                         parentControlIDToPortalWidgetSections.Add(parentControlIdLookup, new List<PortalWidgetSection>());
+                        controlIdsToCheck.Add(parentControlIdLookup);
                     }
 
                     var parentSections = parentControlIDToPortalWidgetSections[parentControlIdLookup];
@@ -1142,6 +1309,9 @@ namespace KX12To13Converter.Base.Classes.PortalEngineToPageBuilder
                         var webpartLookup = webpart.ControlID.ToLowerInvariant();
                         if (controlIdsToCheck.Contains(webpartLookup))
                         {
+                            controlIdsToCheck.Remove(webpartLookup);
+                            controlIdsChecked.Add(webpartLookup);
+
                             // Add previously grouped to array
                             if (groupedWidgetSection.SectionZoneToWidgets[0].Any())
                             {
@@ -1157,7 +1327,7 @@ namespace KX12To13Converter.Base.Classes.PortalEngineToPageBuilder
                             // Add layout webpart section to new parent
                             parentControlIDToPortalWidgetSections[webpartLookup].ForEach(l => l.SectionZoneToWidgets.ForEach(sw => sw.ForEach(pw => pw.AdditionalAncestorZones.Add(parentControl))));
                             parentSections.AddRange(parentControlIDToPortalWidgetSections[webpartLookup]);
-                            processedParentControlIds.Add(webpartLookup);
+                            currentLevelProcessedParentControlIds.Add(webpartLookup);
                         }
                         else
                         {
@@ -1171,6 +1341,8 @@ namespace KX12To13Converter.Base.Classes.PortalEngineToPageBuilder
                     {
                         parentSections.Add(groupedWidgetSection);
                     }
+
+                    
                 }
             }
             // At this point, the parentTemplateZoneIDToPortalWidget should contain all the layout widgets with sub widgets in order.
@@ -1241,6 +1413,31 @@ namespace KX12To13Converter.Base.Classes.PortalEngineToPageBuilder
 
         #region "Helpers / Others"
 
+        private PortalToMVCBuildPageFindSectionWebpartEventArgs FindParentSection(WebPartZoneInstance widgetGeneratedZone, IEnumerable<WebPartInstance> allLayoutWebparts)
+        {
+            PortalToMVCBuildPageFindSectionWebpartEventArgs findSectionEventArgs = new PortalToMVCBuildPageFindSectionWebpartEventArgs(widgetGeneratedZone, allLayoutWebparts)
+            {
+                ParentLayoutWebpart = null
+            };
+
+            // ProcessPage.Before
+            using (var findParentSectionWebpart = PortalToMVCEvents.FindParentSectionWebpart.StartEvent(findSectionEventArgs))
+            {
+                if (!findSectionEventArgs.Handled)
+                {
+                    // Go by parent control next
+                    var zoneArray = widgetGeneratedZone.ZoneID.Split('_');
+                    string parentControlIdLookup = zoneArray.Length > 1 ? zoneArray.Take(zoneArray.Length - 1).Join("_").ToLowerInvariant() : widgetGeneratedZone.ZoneID.ToLowerInvariant();
+                    var sectionWebpart = allLayoutWebparts.Where(x => x.ControlID.Equals(parentControlIdLookup, StringComparison.OrdinalIgnoreCase)).FirstOrDefault();
+                    findSectionEventArgs.ParentControlID = parentControlIdLookup;
+                    findSectionEventArgs.ParentLayoutWebpart = sectionWebpart;
+                }
+
+                // ProcessPage.After
+                findParentSectionWebpart.FinishEvent();
+            }
+            return findSectionEventArgs;
+        }
         private string GetPEZoneID(PortalWebpartZone peZoneEditableArea)
         {
             var peZoneID = string.Empty;
@@ -1279,16 +1476,17 @@ namespace KX12To13Converter.Base.Classes.PortalEngineToPageBuilder
             // There are possible inline widget fields, get values and split if needed.
             var propertyWithInlineWidget = configuration.PE_Widget.KeyValues.First(x => x.CanContainInlineWidgets);
 
-            var value = widget.GetValue(propertyWithInlineWidget.Key);
-            if (value == null || !value.ToString().Contains("{^"))
+            var value = editableWebParts[widget.ControlID] != null ? editableWebParts[widget.ControlID] : widget.GetValue(propertyWithInlineWidget.Key);
+
+            if (value != null && value.ToString().Contains("{^"))
             {
-                widgets.Add(GetBasicWidgetToPortalWidget(eventArgs, widget, editableWebParts));
+                widgets.AddRange(ConvertInlinedContentToPortalWidgets(eventArgs, widget, propertyWithInlineWidget, value.ToString(), editableWebParts));
                 return widgets;
             }
-            widgets.AddRange(ConvertInlinedContentToPortalWidgets(eventArgs, widget, propertyWithInlineWidget, value.ToString(), editableWebParts));
 
-
+            widgets.Add(GetBasicWidgetToPortalWidget(eventArgs, widget, editableWebParts));
             return widgets;
+
         }
 
         private List<PortalWidget> ConvertInlinedContentToPortalWidgets(PortalToMVCProcessDocumentPrimaryEventArgs eventArgs, WebPartInstance widget, InKeyValueOutKeyValues conversionKey, string contentWithInlineWidgets, MultiKeyDictionary<string> editableWebParts)
@@ -1417,7 +1615,7 @@ namespace KX12To13Converter.Base.Classes.PortalEngineToPageBuilder
                     }
                     else
                     {
-                        
+
                         try
                         {
                             // Try closing the document tags
@@ -1429,7 +1627,8 @@ namespace KX12To13Converter.Base.Classes.PortalEngineToPageBuilder
                                 if (!inlineHit)
                                 {
                                     contentBeforeInline = true;
-                                } else
+                                }
+                                else
                                 {
                                     contentAfterInline = true;
                                 }
@@ -1609,7 +1808,7 @@ namespace KX12To13Converter.Base.Classes.PortalEngineToPageBuilder
                         string parameterName = parameter.Substring(nameStart, nameEnd - nameStart);
                         string parameterValue = parameter.Substring(nameEnd + 1);
 
-                        parameters[parameterName] = HttpUtility.UrlDecode(HTMLHelper.HTMLDecode(MacroProcessor.UnescapeParameterValue(parameterValue).Replace("+"," ")));
+                        parameters[parameterName] = HttpUtility.UrlDecode(HTMLHelper.HTMLDecode(MacroProcessor.UnescapeParameterValue(parameterValue).Replace("+", " ")));
                     }
                     else
                     {
@@ -1621,7 +1820,7 @@ namespace KX12To13Converter.Base.Classes.PortalEngineToPageBuilder
                     expression = expression.Substring(0, paramIndex);
                     paramIndex = expression.LastIndexOf("|", StringComparison.Ordinal);
                 }
-                if(string.IsNullOrWhiteSpace(controlName) && parameters.ContainsKey("name"))
+                if (string.IsNullOrWhiteSpace(controlName) && parameters.ContainsKey("name"))
                 {
                     controlName = ValidationHelper.GetString(parameters["name"], string.Empty);
                 }

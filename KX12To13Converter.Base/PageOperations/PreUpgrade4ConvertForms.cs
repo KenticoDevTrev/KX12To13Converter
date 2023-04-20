@@ -1,4 +1,5 @@
 ﻿using CMS.DataEngine;
+using CMS.EventLog;
 using CMS.Helpers;
 using CMS.OnlineForms;
 using KX12To13Converter.Interfaces;
@@ -72,7 +73,40 @@ namespace KX12To13Converter.Base.PageOperations
                     }
 
                     settingsNode.AppendChild(componentidentifierNode);
+                    try { 
+                    // Remove the controlname node
+                    settingsNode.RemoveChild(controlNode);
+                    } catch(Exception ex)
+                    {
+                        EventLogProvider.LogException("PreUPgrade4ConvertForms.cs", "ErrorRemovingControlNode", ex, additionalMessage: "This code was not able to be fully tested...notify tfayas@gmail.com if you encounter this.");
+
+                    }
                 }
+                try
+                {
+                    // Remove non system, non primary key hidden fields
+                    List<XmlNode> hiddenFields = new List<XmlNode>();
+                    foreach (XmlNode fieldNode in xmlDoc.SelectNodes("//field"))
+                    {
+                        // Ignore primary key, system keys, and visible fields
+                        if (fieldNode["isPK"] != null || fieldNode["system"] != null || (fieldNode["visible"] != null && fieldNode["visible"].Value.Equals("true", StringComparison.OrdinalIgnoreCase)))
+                        {
+                            continue;
+                        }
+                        hiddenFields.Add(fieldNode);
+                    }
+                    if (hiddenFields.Any())
+                    {
+                        foreach (var hiddenField in hiddenFields)
+                        {
+                            xmlDoc.RemoveChild(hiddenField);
+                        }
+                    }
+                } catch(Exception ex)
+                {
+                    EventLogProvider.LogException("PreUPgrade4ConvertForms.cs", "ErrorRemovingHiddenFields", ex, additionalMessage: "This code was not able to be fully tested...notify tfayas@gmail.com if you encounter this.");
+                }
+
                 formBuilderJson += string.Join(",", formElements);
                 formBuilderJson += $"                ]              }}            ]          }}        ]      }}    ]  }}";
 

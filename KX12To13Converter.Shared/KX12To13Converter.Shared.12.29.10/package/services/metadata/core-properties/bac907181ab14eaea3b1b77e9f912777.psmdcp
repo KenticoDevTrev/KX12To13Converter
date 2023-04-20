@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<coreProperties xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:dcterms="http://purl.org/dc/terms/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://schemas.openxmlformats.org/package/2006/metadata/core-properties">
-  <dc:creator>Trevor Fayas</dc:creator>
-  <dc:description>Shared library between the KX12To13Converter.Admin and KX12To13Converter.Base</dc:description>
-  <dc:identifier>KX12To13Converter.Shared</dc:identifier>
-  <version>12.29.10</version>
-  <keywords>Kentico Xperience, KX12, 12, Xperience 13, Upgrade, Converter</keywords>
-  <lastModifiedBy>NuGet, Version=4.9.4.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35;Microsoft Windows NT 6.2.9200.0;.NET Framework 4.6</lastModifiedBy>
-</coreProperties>

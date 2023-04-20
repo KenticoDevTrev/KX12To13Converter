@@ -39,7 +39,7 @@ namespace KX12To13Converter.Events
                     }
                     else
                     {
-                        pbSection.Properties[propertyKey] = $"-{pbSection.Properties[propertyKey].Trim('-')}";
+                        pbSection.Properties[propertyKey] = $"-{pbSection.Properties[propertyKey].Trim('-')}".Replace("-0","0"); // -0 to 0 for "flex" value of 0
                     }
                 }
                 if (propertyKey.Equals("columnCSSPrepend", StringComparison.OrdinalIgnoreCase))

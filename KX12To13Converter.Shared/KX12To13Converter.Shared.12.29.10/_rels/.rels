@@ -1,5 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-  <Relationship Type="http://schemas.microsoft.com/packaging/2010/07/manifest" Target="/KX12To13Converter.Shared.nuspec" Id="R03fd78c0c6464407" />
-  <Relationship Type="http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties" Target="/package/services/metadata/core-properties/bac907181ab14eaea3b1b77e9f912777.psmdcp" Id="Rd3ecd1ae7a5d4df2" />
-</Relationships>

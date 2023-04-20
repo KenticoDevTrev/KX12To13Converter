@@ -7,6 +7,7 @@ using CMS.Helpers;
 using CMS.SiteProvider;
 using KX12To13Converter.Base.Classes.PortalEngineToPageBuilder;
 using KX12To13Converter.Base.PageOperations;
+using KX12To13Converter.Events;
 using KX12To13Converter.Interfaces;
 using KX12To13Converter.PortalEngineToPageBuilder;
 using KX12To13Converter.PortalEngineToPageBuilder.EventArgs;
@@ -30,14 +31,27 @@ namespace KX12To13Converter.Base.QueueProcessor
         /// <returns></returns>
         public static PageBuilderConversionsInfo GenerateConversionInfo(TreeNode document, PortalToMVCProcessDocumentPrimaryEventArgs results, bool markForSend)
         {
+
+            string widgetJson = JsonConvert.SerializeObject(results.PageBuilderData.ZoneConfiguration, Formatting.None);
+            string templateJson = !string.IsNullOrWhiteSpace(results.PageBuilderData.TemplateConfiguration.Identifier) ? JsonConvert.SerializeObject(results.PageBuilderData.TemplateConfiguration, Formatting.None) : string.Empty;
+
+            // Allow users to adjust the JSON data through this event.
+            var widgetJsonEventHandlerArgs = new ProcessesTemplateWidgetJsonEventArgs(templateJson, widgetJson, document, results);
+            using (var widgetJsonEventHandler = PortalToMVCEvents.ProcessTemplateWidgetJson.StartEvent(widgetJsonEventHandlerArgs))
+            {
+                widgetJsonEventHandler.FinishEvent();
+            }
+            widgetJson = widgetJsonEventHandlerArgs.WidgetConfigurationJson;
+            templateJson = widgetJsonEventHandlerArgs.PageTemplateJson;
+
             PageBuilderConversionsInfo pageBuilderConversionsInfo = new PageBuilderConversionsInfo()
             {
                 PageBuilderConversionDocumentID = document.DocumentID,
                 PageBuilderConversionDateProcessed = DateTime.Now,
                 PageBuilderConversionMarkedForSend = markForSend,
                 PageBuilderConversionMarkForConversion = false,
-                PageBuilderConversionPageBuilderJSON = JsonConvert.SerializeObject(results.PageBuilderData.ZoneConfiguration, Formatting.None),
-                PageBuilderConversionTemplateJSON = !string.IsNullOrWhiteSpace(results.PageBuilderData.TemplateConfiguration.Identifier) ? JsonConvert.SerializeObject(results.PageBuilderData.TemplateConfiguration, Formatting.None) : string.Empty,
+                PageBuilderConversionPageBuilderJSON = widgetJson,
+                PageBuilderConversionTemplateJSON = templateJson,
                 PageBuilderConversionSuccessful = !results.CancelOperation,
                 PageBuilderConversionNotes = JsonConvert.SerializeObject(results.ConversionNotes, Formatting.Indented)
             };

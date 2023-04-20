@@ -2,7 +2,7 @@
 <package >
   <metadata>
     <id>KX12To13Converter.Shared</id>
-    <version>12.29.14</version>
+    <version>12.29.21</version>
     <authors>Trevor Fayas</authors>
     <owners>Trevor Fayas</owners>
     <license type="expression">MIT</license>
@@ -10,7 +10,7 @@
     <iconUrl>https://avatars.githubusercontent.com/u/58479377?v=4</iconUrl>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
     <description>Shared library between the KX12To13Converter.Admin and KX12To13Converter.Base</description>
-    <releaseNotes>Publishing on 14, forgot to publish</releaseNotes>
+    <releaseNotes>Added in supporting classes for major fix to Converter concerning layout widgets with non layout siblings, and added additional Event for JSON modification to help with MediaSelector and PathSelector support in upgrade. (And missed one in package 20)</releaseNotes>
     <copyright>Copyright 2022</copyright>
     <tags>Kentico Xperience, KX12, Kentico 12, Xperience 13, Upgrade, Converter</tags>
   </metadata>
