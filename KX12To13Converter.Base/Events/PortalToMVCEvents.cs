@@ -17,6 +17,8 @@ namespace KX12To13Converter.Events
         public static ProcessSectionZoneEventHandler ProcessSectionZone;
 
         public static ProcessWidgetEventHandler ProcessWidget;
+
+        public static ProcessesTemplateWidgetJsonEventHandler ProcessTemplateWidgetJson;
         static PortalToMVCEvents()
         {
             FindParentSectionWebpart = new BuildPageFindSectionWebpartEventHandler()
@@ -52,6 +54,11 @@ namespace KX12To13Converter.Events
             ProcessWidget = new ProcessWidgetEventHandler()
             {
                 Name = "PortalToMVCEvents.ProcessWidget"
+            };
+
+            ProcessTemplateWidgetJson = new ProcessesTemplateWidgetJsonEventHandler()
+            {
+                Name = "PortalToMVCEvents.ProcessTemplateWidgetJson"
             };
         }
 

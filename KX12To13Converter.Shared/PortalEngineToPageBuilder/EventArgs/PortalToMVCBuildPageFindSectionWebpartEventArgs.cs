@@ -29,6 +29,11 @@ namespace KX12To13Converter.PortalEngineToPageBuilder.EventArgs
         public WebPartInstance ParentLayoutWebpart { get; set; }
 
         /// <summary>
+        /// The parent Control ID, often is the zone name minus the _#, but sometimes it is different, can set on the events
+        /// </summary>
+        public string ParentControlID { get; set; }
+
+        /// <summary>
         /// Set to true if you handled this.
         /// </summary>
         public bool Handled { get; set; } = false;

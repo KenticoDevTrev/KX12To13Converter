@@ -1,6 +1,4 @@
 
-
-
 # Kentico Xperience 12 Portal to Kentico Xperience 13 Converter
 This tool allows you to convert  your portal engine site to a KX13 upgradeable instance.
 
@@ -12,11 +10,12 @@ Kentico does not support migrating Kentico Xperience 12 Portal engine to Kentico
 1. Install `KX12To13Converter.Admin` Nuget Package on your Kentico Application
 2. Either install the `KX12To13Converter.Base` Nuget Package on your Kentico Application, OR clone down the KX12To13Converter.Base class library from this repository and include it in your solution and reference it on your Kentico Application (for easier debugging).
 3. You will probably also need to upgrade the `Kentico.Libraries library` to your KX12 instance Hotfix (since these packages depend on this library).
-4. Rebuild your web application
-5. Log into Kentico as a Global Administrator
-6. Go to Modules
-7. Search and edit `KX12 to 13 Converter`
-8. Go to `Sites` and add to your site.
+4. Check KX12To13Converter.Admin, KX12To13Converter.Base, and KX12To13Converter.Shared for NuGet package updats.
+5. Rebuild your web application
+6. Log into Kentico as a Global Administrator
+7. Go to Modules
+8. Search and edit `KX12 to 13 Converter`
+9. Go to `Sites` and add to your site.
 
 ## KX13 Kentico Application ("Mother"/"Admin")
 Once the upgrade is complete and your solution is hotfixed to at least 13.0.31, you can optionally install the [KX12To13Converter.KX13Receiver](https://www.nuget.org/packages/KX12To13Converter.KX13Receiver).  Installing this will install/upgrade the exsiting KX12To13Converter module and allow you to re-convert and push pages from your KX12 instance to your KX13.
@@ -89,6 +88,7 @@ The Logic goes:
 * **ProcessSection**: For when converting any Layout Widgets (ex: Bootstrap Layout) to Page Builder Sections
 * **ProcessSectionZone**: For when converting any widget zones within those Layout Widgets to a Page Builder Section's Zones (ex the first, then second column of a bootstrap layout)
 * **ProcessWidget**: For when converting a Portal Engine Widget to a Page Builder Widget
+* **ProcessTemplateWidgetJson**: [12.29.21+] Once a conversion is complete, the Widget and Template JSON are passed to this event where you can modify the json string directly.  You can leverage the `MediaSelectorJsonHelper` and `PathSelectorJsonHelper` classes to convert string media file urls and paths to the appropriate [Media File Selector](https://docs.xperience.io/developing-websites/page-builder-development/selectors-for-page-builder-components#Selectorsforpagebuildercomponents-Mediafilesselector) and [Path Selector](https://docs.xperience.io/developing-websites/page-builder-development/selectors-for-page-builder-components#Selectorsforpagebuildercomponents-Pathselector) formats.
 
 Also for your convenience, I have included a BootstrapLayout 3 to 4 conversion hook implementation since the formatting of those has changed.
 ```csharp 

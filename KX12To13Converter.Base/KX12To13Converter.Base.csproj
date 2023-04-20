@@ -262,8 +262,8 @@
     <Reference Include="HtmlAgilityPack, Version=1.11.46.0, Culture=neutral, PublicKeyToken=bd319b19eaf3b43a, processorArchitecture=MSIL">
       <HintPath>packages\HtmlAgilityPack.1.11.46\lib\Net45\HtmlAgilityPack.dll</HintPath>
     </Reference>
-    <Reference Include="KX12To13Converter.Shared, Version=12.29.14.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>packages\KX12To13Converter.Shared.12.29.14\lib\net461\KX12To13Converter.Shared.dll</HintPath>
+    <Reference Include="KX12To13Converter.Shared, Version=12.29.21.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>packages\KX12To13Converter.Shared.12.29.21\lib\net461\KX12To13Converter.Shared.dll</HintPath>
     </Reference>
     <Reference Include="LinqToTwitter.net, Version=4.0.0.0, Culture=neutral, PublicKeyToken=957107be965c25d9, processorArchitecture=MSIL">
       <HintPath>packages\linqtotwitter.4.0.0\lib\net45\LinqToTwitter.net.dll</HintPath>
@@ -459,6 +459,7 @@
     <Compile Include="Classes\PortalEngineToPageBuilder\PortalEngineToMVCConverterRetriever.cs" />
     <Compile Include="Events\PortalToMVCEvents.cs" />
     <Compile Include="Events\BuildPageFindSectionWebpartEventHandler.cs" />
+    <Compile Include="Events\ProcessesTemplateWidgetJsonEventHandler.cs" />
     <Compile Include="Events\ProcessPageEventHandler.cs" />
     <Compile Include="Events\ProcessSectionEventHandler.cs" />
     <Compile Include="Events\ProcessWidget_After_CamelCase.cs" />
@@ -468,6 +469,8 @@
     <Compile Include="Events\ProcessZoneEventHandler.cs" />
     <Compile Include="Events\ProcessTemplateEventHandler.cs" />
     <Compile Include="GlobalEvents\KX12To13ConverterEventsModule.cs" />
+    <Compile Include="Helpers\MediaSelectorJsonHelper.cs" />
+    <Compile Include="Helpers\PathSelectorJsonHelper.cs" />
     <Compile Include="KX12To13DependencyInjector.cs" />
     <Compile Include="PageOperations\PageBuilderUnigridExtensionMethods.cs" />
     <Compile Include="PageOperations\PreUpgrade1VersioningWorkflow.cs" />
