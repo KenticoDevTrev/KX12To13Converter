@@ -25,9 +25,9 @@ DECLARE @TableName nvarchar(100);
 DECLARE CUR_TABLES CURSOR FAST_FORWARD FOR
     SELECT distinct TableName
     FROM  (
-		SELECT TABLE_SCHEMA+'.'+TABLE_NAME as TableName FROM FRESH_XPERIENCEDB.INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE='BASE TABLE'
+		SELECT TABLE_SCHEMA+'.'+TABLE_NAME COLLATE SQL_Latin1_General_CP1_CI_AS as TableName FROM FRESH_XPERIENCEDB.INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE='BASE TABLE'
 		UNION ALL
-		SELECT TABLE_SCHEMA+'.'+TABLE_NAME as TableName FROM UPGRADED_XPERIENCEDB.INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE='BASE TABLE'
+		SELECT TABLE_SCHEMA+'.'+TABLE_NAME COLLATE SQL_Latin1_General_CP1_CI_AS as TableName FROM UPGRADED_XPERIENCEDB.INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE='BASE TABLE'
 		) a
 	order by TableName
  
@@ -41,19 +41,19 @@ IF (EXISTS (SELECT * FROM FRESH_XPERIENCEDB.INFORMATION_SCHEMA.TABLES WHERE TABL
 BEGIN
 	-- Exists in both, compare
 if(EXISTS(
-	SELECT @TableName as [Table], name, system_type_id, user_type_id,max_length, precision,scale, is_nullable, is_identity FROM FRESH_XPERIENCEDB.sys.columns
+	SELECT @TableName COLLATE SQL_Latin1_General_CP1_CI_AS as [Table], name COLLATE SQL_Latin1_General_CP1_CI_AS, system_type_id, user_type_id,max_length, precision,scale, is_nullable, is_identity FROM FRESH_XPERIENCEDB.sys.columns
 	WHERE object_id = OBJECT_ID('FRESH_XPERIENCEDB.'+@TableName)
 	EXCEPT
-	SELECT @TableName as [Table], name, system_type_id, user_type_id,max_length, precision,scale, is_nullable, is_identity FROM UPGRADED_XPERIENCEDB.sys.columns
+	SELECT @TableName COLLATE SQL_Latin1_General_CP1_CI_AS as [Table], name COLLATE SQL_Latin1_General_CP1_CI_AS, system_type_id, user_type_id,max_length, precision,scale, is_nullable, is_identity FROM UPGRADED_XPERIENCEDB.sys.columns
 	WHERE object_id = OBJECT_ID('UPGRADED_XPERIENCEDB.'+@TableName)
 	)) 
 	BEGIN
 		-- Show differences
-		SELECT @TableName as [Table], name, system_type_id, user_type_id,max_length, precision,scale, is_nullable, is_identity FROM FRESH_XPERIENCEDB.sys.columns
+		SELECT @TableName COLLATE SQL_Latin1_General_CP1_CI_AS as [Table], name COLLATE SQL_Latin1_General_CP1_CI_AS, system_type_id, user_type_id,max_length, precision,scale, is_nullable, is_identity FROM FRESH_XPERIENCEDB.sys.columns
 		WHERE object_id = OBJECT_ID('FRESH_XPERIENCEDB.'+@TableName)
 		EXCEPT
 	
-		SELECT @TableName as [Table], name, system_type_id, user_type_id,max_length, precision,scale, is_nullable, is_identity FROM UPGRADED_XPERIENCEDB.sys.columns
+		SELECT @TableName COLLATE SQL_Latin1_General_CP1_CI_AS as [Table], name COLLATE SQL_Latin1_General_CP1_CI_AS, system_type_id, user_type_id,max_length, precision,scale, is_nullable, is_identity FROM UPGRADED_XPERIENCEDB.sys.columns
 		WHERE object_id = OBJECT_ID('UPGRADED_XPERIENCEDB.'+@TableName)
 	end
 END else begin
