@@ -1,5 +1,5 @@
 -------------------------------------------------------------------------------
--------- POST UPGRADE Kentico Xperience 12 to Kentico Xperience 13  -----------
+-------- 1 POST UPGRADE Kentico Xperience 12 to Kentico Xperience 13  -----------
 -------- Constraints/Index Check                                   ------------
 -- Instances of Kentico Xperience that started before KX 12 may have an old  --
 -- Tables, Views, Index/Constraints/Functions, etc.  These should be updated,--
@@ -42,14 +42,14 @@ from (
     select schema_name(t.schema_id) + '.' + t.[name] as table_view, 
         case when t.[type] = 'U' then 'Table'
             when t.[type] = 'V' then 'View'
-            end as [object_type],
+            end COLLATE SQL_Latin1_General_CP1_CI_AS as [object_type],
         case when c.[type] = 'PK' then 'Primary key'
             when c.[type] = 'UQ' then 'Unique constraint'
             when i.[type] = 1 then 'Unique clustered index'
             when i.type = 2 then 'Unique index'
-            end as constraint_type, 
+            end COLLATE SQL_Latin1_General_CP1_CI_AS as constraint_type, 
         isnull(c.[name], i.[name]) as constraint_name,
-        substring(column_names, 1, len(column_names)-1) as [details]
+        substring(column_names, 1, len(column_names)-1) COLLATE SQL_Latin1_General_CP1_CI_AS as [details]
     from FRESH_XPERIENCEDB.sys.objects t
         left outer join FRESH_XPERIENCEDB.sys.indexes i
             on t.object_id = i.object_id
@@ -68,11 +68,11 @@ from (
     where is_unique = 1
     and t.is_ms_shipped <> 1
     union all 
-    select schema_name(fk_tab.schema_id) + '.' + fk_tab.name as foreign_table,
-        'Table',
-        'Foreign key',
-        fk.name as fk_constraint_name,
-        schema_name(pk_tab.schema_id) + '.' + pk_tab.name
+    select schema_name(fk_tab.schema_id) + '.' + fk_tab.name COLLATE SQL_Latin1_General_CP1_CI_AS as foreign_table,
+        'Table' COLLATE SQL_Latin1_General_CP1_CI_AS,
+        'Foreign key' COLLATE SQL_Latin1_General_CP1_CI_AS,
+        fk.name COLLATE SQL_Latin1_General_CP1_CI_AS as fk_constraint_name,
+        schema_name(pk_tab.schema_id) + '.' + pk_tab.name COLLATE SQL_Latin1_General_CP1_CI_AS
     from FRESH_XPERIENCEDB.sys.foreign_keys fk
         inner join FRESH_XPERIENCEDB.sys.tables fk_tab
             on fk_tab.object_id = fk.parent_object_id
@@ -82,10 +82,10 @@ from (
             on fk_cols.constraint_object_id = fk.object_id
     union all
     select schema_name(t.schema_id) + '.' + t.[name],
-        'Table',
-        'Check constraint',
+        'Table' COLLATE SQL_Latin1_General_CP1_CI_AS,
+        'Check constraint' COLLATE SQL_Latin1_General_CP1_CI_AS,
         con.[name] as constraint_name,
-        con.[definition]
+        con.[definition] COLLATE SQL_Latin1_General_CP1_CI_AS
     from FRESH_XPERIENCEDB.sys.check_constraints con
         left outer join FRESH_XPERIENCEDB.sys.objects t
             on con.parent_object_id = t.object_id
@@ -94,10 +94,10 @@ from (
             and con.parent_object_id = col.object_id
     union all
     select schema_name(t.schema_id) + '.' + t.[name],
-        'Table',
-        'Default constraint',
+        'Table' COLLATE SQL_Latin1_General_CP1_CI_AS,
+        'Default constraint' COLLATE SQL_Latin1_General_CP1_CI_AS,
         con.[name],
-        col.[name] + ' = ' + con.[definition]
+        col.[name] + ' = ' + con.[definition] COLLATE SQL_Latin1_General_CP1_CI_AS
     from FRESH_XPERIENCEDB.sys.default_constraints con
         left outer join FRESH_XPERIENCEDB.sys.objects t
             on con.parent_object_id = t.object_id
@@ -114,17 +114,17 @@ from (
     constraint_name,
     details
 from (
-    select schema_name(t.schema_id) + '.' + t.[name] as table_view, 
+    select schema_name(t.schema_id) + '.' + t.[name] COLLATE SQL_Latin1_General_CP1_CI_AS as table_view, 
         case when t.[type] = 'U' then 'Table'
             when t.[type] = 'V' then 'View'
-            end as [object_type],
+            end COLLATE SQL_Latin1_General_CP1_CI_AS as [object_type],
         case when c.[type] = 'PK' then 'Primary key'
             when c.[type] = 'UQ' then 'Unique constraint'
             when i.[type] = 1 then 'Unique clustered index'
             when i.type = 2 then 'Unique index'
-            end as constraint_type, 
+            end COLLATE SQL_Latin1_General_CP1_CI_AS as constraint_type, 
         isnull(c.[name], i.[name]) as constraint_name,
-        substring(column_names, 1, len(column_names)-1) as [details]
+        substring(column_names, 1, len(column_names)-1) COLLATE SQL_Latin1_General_CP1_CI_AS as [details]
     from UPGRADED_XPERIENCEDB.sys.objects t
         left outer join UPGRADED_XPERIENCEDB.sys.indexes i
             on t.object_id = i.object_id
@@ -143,11 +143,11 @@ from (
     where is_unique = 1
     and t.is_ms_shipped <> 1
     union all 
-    select schema_name(fk_tab.schema_id) + '.' + fk_tab.name as foreign_table,
-        'Table',
-        'Foreign key',
-        fk.name as fk_constraint_name,
-        schema_name(pk_tab.schema_id) + '.' + pk_tab.name
+    select schema_name(fk_tab.schema_id) + '.' + fk_tab.name COLLATE SQL_Latin1_General_CP1_CI_AS as foreign_table,
+        'Table' COLLATE SQL_Latin1_General_CP1_CI_AS,
+        'Foreign key' COLLATE SQL_Latin1_General_CP1_CI_AS,
+        fk.name COLLATE SQL_Latin1_General_CP1_CI_AS as fk_constraint_name,
+        schema_name(pk_tab.schema_id) + '.' + pk_tab.name COLLATE SQL_Latin1_General_CP1_CI_AS
     from UPGRADED_XPERIENCEDB.sys.foreign_keys fk
         inner join UPGRADED_XPERIENCEDB.sys.tables fk_tab
             on fk_tab.object_id = fk.parent_object_id
@@ -156,11 +156,11 @@ from (
         inner join UPGRADED_XPERIENCEDB.sys.foreign_key_columns fk_cols
             on fk_cols.constraint_object_id = fk.object_id
     union all
-    select schema_name(t.schema_id) + '.' + t.[name],
-        'Table',
-        'Check constraint',
+    select schema_name(t.schema_id) + '.' + t.[name] COLLATE SQL_Latin1_General_CP1_CI_AS,
+        'Table' COLLATE SQL_Latin1_General_CP1_CI_AS,
+        'Check constraint' COLLATE SQL_Latin1_General_CP1_CI_AS,
         con.[name] as constraint_name,
-        con.[definition]
+        con.[definition] COLLATE SQL_Latin1_General_CP1_CI_AS
     from UPGRADED_XPERIENCEDB.sys.check_constraints con
         left outer join UPGRADED_XPERIENCEDB.sys.objects t
             on con.parent_object_id = t.object_id
@@ -168,11 +168,11 @@ from (
             on con.parent_column_id = col.column_id
             and con.parent_object_id = col.object_id
     union all
-    select schema_name(t.schema_id) + '.' + t.[name],
-        'Table',
-        'Default constraint',
+    select schema_name(t.schema_id) + '.' + t.[name] COLLATE SQL_Latin1_General_CP1_CI_AS,
+        'Table' COLLATE SQL_Latin1_General_CP1_CI_AS,
+        'Default constraint' COLLATE SQL_Latin1_General_CP1_CI_AS,
         con.[name],
-        col.[name] + ' = ' + con.[definition]
+        col.[name] + ' = ' + con.[definition] COLLATE SQL_Latin1_General_CP1_CI_AS
     from UPGRADED_XPERIENCEDB.sys.default_constraints con
         left outer join UPGRADED_XPERIENCEDB.sys.objects t
             on con.parent_object_id = t.object_id
@@ -192,17 +192,17 @@ select table_view,
     constraint_name,
     details
 from (
-    select schema_name(t.schema_id) + '.' + t.[name] as table_view, 
+    select schema_name(t.schema_id) + '.' + t.[name] COLLATE SQL_Latin1_General_CP1_CI_AS as table_view, 
         case when t.[type] = 'U' then 'Table'
             when t.[type] = 'V' then 'View'
-            end as [object_type],
+            end COLLATE SQL_Latin1_General_CP1_CI_AS as [object_type],
         case when c.[type] = 'PK' then 'Primary key'
             when c.[type] = 'UQ' then 'Unique constraint'
             when i.[type] = 1 then 'Unique clustered index'
             when i.type = 2 then 'Unique index'
-            end as constraint_type, 
+            end COLLATE SQL_Latin1_General_CP1_CI_AS as constraint_type, 
         isnull(c.[name], i.[name]) as constraint_name,
-        substring(column_names, 1, len(column_names)-1) as [details]
+        substring(column_names, 1, len(column_names)-1) COLLATE SQL_Latin1_General_CP1_CI_AS as [details]
     from UPGRADED_XPERIENCEDB.sys.objects t
         left outer join UPGRADED_XPERIENCEDB.sys.indexes i
             on t.object_id = i.object_id
@@ -221,11 +221,11 @@ from (
     where is_unique = 1
     and t.is_ms_shipped <> 1
     union all 
-    select schema_name(fk_tab.schema_id) + '.' + fk_tab.name as foreign_table,
-        'Table',
-        'Foreign key',
-        fk.name as fk_constraint_name,
-        schema_name(pk_tab.schema_id) + '.' + pk_tab.name
+    select schema_name(fk_tab.schema_id) + '.' + fk_tab.name COLLATE SQL_Latin1_General_CP1_CI_AS as foreign_table,
+        'Table' COLLATE SQL_Latin1_General_CP1_CI_AS,
+        'Foreign key' COLLATE SQL_Latin1_General_CP1_CI_AS,
+        fk.name COLLATE SQL_Latin1_General_CP1_CI_AS as fk_constraint_name,
+        schema_name(pk_tab.schema_id) + '.' + pk_tab.name COLLATE SQL_Latin1_General_CP1_CI_AS
     from UPGRADED_XPERIENCEDB.sys.foreign_keys fk
         inner join UPGRADED_XPERIENCEDB.sys.tables fk_tab
             on fk_tab.object_id = fk.parent_object_id
@@ -234,11 +234,11 @@ from (
         inner join UPGRADED_XPERIENCEDB.sys.foreign_key_columns fk_cols
             on fk_cols.constraint_object_id = fk.object_id
     union all
-    select schema_name(t.schema_id) + '.' + t.[name],
-        'Table',
-        'Check constraint',
+    select schema_name(t.schema_id) + '.' + t.[name] COLLATE SQL_Latin1_General_CP1_CI_AS,
+        'Table' COLLATE SQL_Latin1_General_CP1_CI_AS,
+        'Check constraint' COLLATE SQL_Latin1_General_CP1_CI_AS,
         con.[name] as constraint_name,
-        con.[definition]
+        con.[definition] COLLATE SQL_Latin1_General_CP1_CI_AS
     from UPGRADED_XPERIENCEDB.sys.check_constraints con
         left outer join UPGRADED_XPERIENCEDB.sys.objects t
             on con.parent_object_id = t.object_id
@@ -246,11 +246,11 @@ from (
             on con.parent_column_id = col.column_id
             and con.parent_object_id = col.object_id
     union all
-    select schema_name(t.schema_id) + '.' + t.[name],
-        'Table',
-        'Default constraint',
+    select schema_name(t.schema_id) + '.' + t.[name] COLLATE SQL_Latin1_General_CP1_CI_AS,
+        'Table' COLLATE SQL_Latin1_General_CP1_CI_AS,
+        'Default constraint' COLLATE SQL_Latin1_General_CP1_CI_AS,
         con.[name],
-        col.[name] + ' = ' + con.[definition]
+        col.[name] + ' = ' + con.[definition] COLLATE SQL_Latin1_General_CP1_CI_AS
     from UPGRADED_XPERIENCEDB.sys.default_constraints con
         left outer join UPGRADED_XPERIENCEDB.sys.objects t
             on con.parent_object_id = t.object_id
@@ -267,17 +267,17 @@ from (
     constraint_name,
     details
 from (
-    select schema_name(t.schema_id) + '.' + t.[name] as table_view, 
+    select schema_name(t.schema_id) + '.' + t.[name] COLLATE SQL_Latin1_General_CP1_CI_AS as table_view, 
         case when t.[type] = 'U' then 'Table'
             when t.[type] = 'V' then 'View'
-            end as [object_type],
+            end COLLATE SQL_Latin1_General_CP1_CI_AS as [object_type],
         case when c.[type] = 'PK' then 'Primary key'
             when c.[type] = 'UQ' then 'Unique constraint'
             when i.[type] = 1 then 'Unique clustered index'
             when i.type = 2 then 'Unique index'
-            end as constraint_type, 
+            end COLLATE SQL_Latin1_General_CP1_CI_AS as constraint_type, 
         isnull(c.[name], i.[name]) as constraint_name,
-        substring(column_names, 1, len(column_names)-1) as [details]
+        substring(column_names, 1, len(column_names)-1) COLLATE SQL_Latin1_General_CP1_CI_AS as [details]
     from UPGRADED_XPERIENCEDB.sys.objects t
         left outer join UPGRADED_XPERIENCEDB.sys.indexes i
             on t.object_id = i.object_id
@@ -296,11 +296,11 @@ from (
     where is_unique = 1
     and t.is_ms_shipped <> 1
     union all 
-    select schema_name(fk_tab.schema_id) + '.' + fk_tab.name as foreign_table,
-        'Table',
-        'Foreign key',
+    select schema_name(fk_tab.schema_id) + '.' + fk_tab.name COLLATE SQL_Latin1_General_CP1_CI_AS as foreign_table,
+        'Table' COLLATE SQL_Latin1_General_CP1_CI_AS,
+        'Foreign key' COLLATE SQL_Latin1_General_CP1_CI_AS,
         fk.name as fk_constraint_name,
-        schema_name(pk_tab.schema_id) + '.' + pk_tab.name
+        schema_name(pk_tab.schema_id) + '.' + pk_tab.name COLLATE SQL_Latin1_General_CP1_CI_AS
     from UPGRADED_XPERIENCEDB.sys.foreign_keys fk
         inner join UPGRADED_XPERIENCEDB.sys.tables fk_tab
             on fk_tab.object_id = fk.parent_object_id
@@ -309,11 +309,11 @@ from (
         inner join UPGRADED_XPERIENCEDB.sys.foreign_key_columns fk_cols
             on fk_cols.constraint_object_id = fk.object_id
     union all
-    select schema_name(t.schema_id) + '.' + t.[name],
-        'Table',
-        'Check constraint',
+    select schema_name(t.schema_id) + '.' + t.[name] COLLATE SQL_Latin1_General_CP1_CI_AS,
+        'Table' COLLATE SQL_Latin1_General_CP1_CI_AS,
+        'Check constraint' COLLATE SQL_Latin1_General_CP1_CI_AS,
         con.[name] as constraint_name,
-        con.[definition]
+        con.[definition] COLLATE SQL_Latin1_General_CP1_CI_AS
     from UPGRADED_XPERIENCEDB.sys.check_constraints con
         left outer join UPGRADED_XPERIENCEDB.sys.objects t
             on con.parent_object_id = t.object_id
@@ -321,11 +321,11 @@ from (
             on con.parent_column_id = col.column_id
             and con.parent_object_id = col.object_id
     union all
-    select schema_name(t.schema_id) + '.' + t.[name],
-        'Table',
-        'Default constraint',
+    select schema_name(t.schema_id) + '.' + t.[name] COLLATE SQL_Latin1_General_CP1_CI_AS,
+        'Table' COLLATE SQL_Latin1_General_CP1_CI_AS,
+        'Default constraint' COLLATE SQL_Latin1_General_CP1_CI_AS,
         con.[name],
-        col.[name] + ' = ' + con.[definition]
+        col.[name] + ' = ' + con.[definition] COLLATE SQL_Latin1_General_CP1_CI_AS
     from UPGRADED_XPERIENCEDB.sys.default_constraints con
         left outer join UPGRADED_XPERIENCEDB.sys.objects t
             on con.parent_object_id = t.object_id
