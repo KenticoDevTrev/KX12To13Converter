@@ -61,49 +61,51 @@
 --END
 --GO
 
+
 select * from (
-select UClass.ClassName, 'ClassFormDefinition' as MisMatchType, UClass.ClassFormDefinition as CurrentValue, FClass.ClassFormDefinition as ProperValue,
-'Update UPGRADED_XPERIENCEDB.dbo.CMS_Class set ClassFormDefinition = '''+REPLACE(FClass.ClassformDefinition, '''', '''''')+''' where ClassID = '+CAST(UClass.ClassID as nvarchar(20)) as UpdateStatement
+select UClass.ClassName COLLATE SQL_Latin1_General_CP1_CI_AS as ClassName, 'ClassFormDefinition' COLLATE SQL_Latin1_General_CP1_CI_AS as MisMatchType, UClass.ClassFormDefinition COLLATE SQL_Latin1_General_CP1_CI_AS as CurrentValue, FClass.ClassFormDefinition COLLATE SQL_Latin1_General_CP1_CI_AS as ProperValue,
+'Update UPGRADED_XPERIENCEDB.dbo.CMS_Class set ClassFormDefinition = '''+REPLACE(FClass.ClassformDefinition, '''', '''''')+''' where ClassID = '+CAST(UClass.ClassID as nvarchar(20)) COLLATE SQL_Latin1_General_CP1_CI_AS as UpdateStatement
 from UPGRADED_XPERIENCEDB.dbo.CMS_Class UClass
-inner join FRESH_XPERIENCEDB.dbo.CMS_Class FClass on FClass.ClassName = UClass.ClassName
-where REPLACE(REPLACE(REPLACE(REPLACE(dbo.StripMacros(UClass.ClassFormDefinition), '"/>', '" />'), CHAR(13), ''), CHAR(10), ''), ' ', '') <> REPLACE(REPLACE(REPLACE(REPLACE(dbo.StripMacros(FClass.ClassFormDefinition), '"/>', '" />'), CHAR(13), ''), CHAR(10), ''), ' ', '')
+inner join FRESH_XPERIENCEDB.dbo.CMS_Class FClass on FClass.ClassName COLLATE SQL_Latin1_General_CP1_CI_AS = UClass.ClassName COLLATE SQL_Latin1_General_CP1_CI_AS
+where REPLACE(REPLACE(REPLACE(REPLACE(dbo.StripMacros(UClass.ClassFormDefinition), '"/>', '" />'), CHAR(13), ''), CHAR(10), ''), ' ', '') COLLATE SQL_Latin1_General_CP1_CI_AS <> REPLACE(REPLACE(REPLACE(REPLACE(dbo.StripMacros(FClass.ClassFormDefinition), '"/>', '" />'), CHAR(13), ''), CHAR(10), ''), ' ', '') COLLATE SQL_Latin1_General_CP1_CI_AS
 UNION ALL
 
-select UClass.ClassName, 'ClassXmlSchema' as MisMatchType, UClass.ClassXmlSchema as CurrentValue, FClass.ClassXmlSchema as ProperValue,
-'Update UPGRADED_XPERIENCEDB.dbo.CMS_Class set ClassXmlSchema = '''+REPLACE(FClass.ClassXmlSchema, '''', '''''')+''' where ClassID = '+CAST(UClass.ClassID as nvarchar(20)) as UpdateStatement 
+select UClass.ClassName COLLATE SQL_Latin1_General_CP1_CI_AS as ClassName, 'ClassXmlSchema' COLLATE SQL_Latin1_General_CP1_CI_AS as MisMatchType, UClass.ClassXmlSchema COLLATE SQL_Latin1_General_CP1_CI_AS as CurrentValue, FClass.ClassXmlSchema COLLATE SQL_Latin1_General_CP1_CI_AS as ProperValue,
+'Update UPGRADED_XPERIENCEDB.dbo.CMS_Class set ClassXmlSchema = '''+REPLACE(FClass.ClassXmlSchema, '''', '''''')+''' where ClassID = '+CAST(UClass.ClassID as nvarchar(20)) COLLATE SQL_Latin1_General_CP1_CI_AS as UpdateStatement 
 from UPGRADED_XPERIENCEDB.dbo.CMS_Class UClass
-inner join FRESH_XPERIENCEDB.dbo.CMS_Class FClass on FClass.ClassName = UClass.ClassName
-where REPLACE(REPLACE(REPLACE(REPLACE(dbo.StripMacros(UClass.ClassXmlSchema), '"/>', '" />'), CHAR(13), ''), CHAR(10), ''), ' ', '') <> REPLACE(REPLACE(REPLACE(REPLACE(dbo.StripMacros(FClass.ClassXmlSchema), '"/>', '" />'), CHAR(13), ''), CHAR(10), ''), ' ', '')
+inner join FRESH_XPERIENCEDB.dbo.CMS_Class FClass on FClass.ClassName COLLATE SQL_Latin1_General_CP1_CI_AS = UClass.ClassName COLLATE SQL_Latin1_General_CP1_CI_AS
+where REPLACE(REPLACE(REPLACE(REPLACE(dbo.StripMacros(UClass.ClassXmlSchema), '"/>', '" />'), CHAR(13), ''), CHAR(10), ''), ' ', '') COLLATE SQL_Latin1_General_CP1_CI_AS <> REPLACE(REPLACE(REPLACE(REPLACE(dbo.StripMacros(FClass.ClassXmlSchema), '"/>', '" />'), CHAR(13), ''), CHAR(10), ''), ' ', '') COLLATE SQL_Latin1_General_CP1_CI_AS
 
 UNION ALL
-select UClass.ClassName+'.'+UAF.FormName, 'AltFormMismatch', UAF.FormDefinition as CurrentValue, FAF.FormDefinition as ProperValue,
-'Update UPGRADED_XPERIENCEDB.dbo.CMS_AlternativeForm set FormDefinition = '''+REPLACE(FAF.FormDefinition, '''', '''''')+''' where FormID = '+CAST(UAF.FormID as nvarchar(20)) as UpdateStatement 
+select UClass.ClassName+'.'+UAF.FormName COLLATE SQL_Latin1_General_CP1_CI_AS as ClassName, 'AltFormMismatch' COLLATE SQL_Latin1_General_CP1_CI_AS as MisMatchType, UAF.FormDefinition COLLATE SQL_Latin1_General_CP1_CI_AS as CurrentValue, FAF.FormDefinition COLLATE SQL_Latin1_General_CP1_CI_AS as ProperValue,
+'Update UPGRADED_XPERIENCEDB.dbo.CMS_AlternativeForm set FormDefinition = '''+REPLACE(FAF.FormDefinition, '''', '''''')+''' where FormID = '+CAST(UAF.FormID as nvarchar(20)) COLLATE SQL_Latin1_General_CP1_CI_AS as UpdateStatement 
 from UPGRADED_XPERIENCEDB.dbo.CMS_AlternativeForm UAF
 inner join UPGRADED_XPERIENCEDB.dbo.CMS_Class UClass on UClass.classID = UAF.FormClassID
-inner join FRESH_XPERIENCEDB.dbo.CMS_Class FClass on FClass.ClassName = UClass.ClassName
-Inner join FRESH_XPERIENCEDB.dbo.CMS_AlternativeForm FAF on FAF.FormClassID = FClass.ClassID and FAF.FormName = UAF.FormName
-where REPLACE(REPLACE(REPLACE(REPLACE(dbo.StripMacros(UAF.FormDefinition), '"/>', '" />'), CHAR(13), ''), CHAR(10), ''), ' ', '') <> REPLACE(REPLACE(REPLACE(REPLACE(dbo.StripMacros(FAF.FormDefinition), '"/>', '" />'), CHAR(13), ''), CHAR(10), ''), ' ', '')
+inner join FRESH_XPERIENCEDB.dbo.CMS_Class FClass on FClass.ClassName COLLATE SQL_Latin1_General_CP1_CI_AS = UClass.ClassName COLLATE SQL_Latin1_General_CP1_CI_AS
+Inner join FRESH_XPERIENCEDB.dbo.CMS_AlternativeForm FAF on FAF.FormClassID = FClass.ClassID and FAF.FormName COLLATE SQL_Latin1_General_CP1_CI_AS = UAF.FormName COLLATE SQL_Latin1_General_CP1_CI_AS
+where REPLACE(REPLACE(REPLACE(REPLACE(dbo.StripMacros(UAF.FormDefinition), '"/>', '" />'), CHAR(13), ''), CHAR(10), ''), ' ', '') COLLATE SQL_Latin1_General_CP1_CI_AS <> REPLACE(REPLACE(REPLACE(REPLACE(dbo.StripMacros(FAF.FormDefinition), '"/>', '" />'), CHAR(13), ''), CHAR(10), ''), ' ', '') COLLATE SQL_Latin1_General_CP1_CI_AS
 
 union all
-select UClass.ClassName+'.'+UAF.FormName, 'AltFormNotOnFresh', UAF.FormDefinition as CurrentValue, FAF.FormDefinition as ProperValue,
-'delete from UPGRADED_XPERIENCEDB.dbo.CMS_AlternativeForm where FormID = '+CAST(UAF.FormID as nvarchar(20)) as UpdateStatement 
+select UClass.ClassName+'.'+UAF.FormName COLLATE SQL_Latin1_General_CP1_CI_AS as ClassName, 'AltFormNotOnFresh' COLLATE SQL_Latin1_General_CP1_CI_AS as MisMatchType, UAF.FormDefinition COLLATE SQL_Latin1_General_CP1_CI_AS as CurrentValue, FAF.FormDefinition COLLATE SQL_Latin1_General_CP1_CI_AS as ProperValue,
+'delete from UPGRADED_XPERIENCEDB.dbo.CMS_AlternativeForm where FormID = '+CAST(UAF.FormID as nvarchar(20)) COLLATE SQL_Latin1_General_CP1_CI_AS as UpdateStatement 
 from UPGRADED_XPERIENCEDB.dbo.CMS_AlternativeForm UAF
 inner join UPGRADED_XPERIENCEDB.dbo.CMS_Class UClass on UClass.classID = UAF.FormClassID
-inner join FRESH_XPERIENCEDB.dbo.CMS_Class FClass on FClass.ClassName = UClass.ClassName
-left join FRESH_XPERIENCEDB.dbo.CMS_AlternativeForm FAF on FAF.FormClassID = FClass.ClassID and FAF.FormName = UAF.FormName
+inner join FRESH_XPERIENCEDB.dbo.CMS_Class FClass on FClass.ClassName COLLATE SQL_Latin1_General_CP1_CI_AS = UClass.ClassName COLLATE SQL_Latin1_General_CP1_CI_AS
+left join FRESH_XPERIENCEDB.dbo.CMS_AlternativeForm FAF on FAF.FormClassID = FClass.ClassID and FAF.FormName COLLATE SQL_Latin1_General_CP1_CI_AS = UAF.FormName COLLATE SQL_Latin1_General_CP1_CI_AS
 where FAF.FormID is null
 
 
 union all
-select FClass.ClassName+'.'+FAF.FormName, 'AltFormMissingOnUpgrade', UAF.FormDefinition as CurrentValue, FAF.FormDefinition as ProperValue,
+select FClass.ClassName+'.'+FAF.FormName COLLATE SQL_Latin1_General_CP1_CI_AS as ClassName, 'AltFormMissingOnUpgrade' COLLATE SQL_Latin1_General_CP1_CI_AS as MisMatchType, UAF.FormDefinition as CurrentValue, FAF.FormDefinition as ProperValue,
 'TODO '''+FAF.FormDefinition+''' where FormID = '+CAST(UAF.FormID as nvarchar(20)) as UpdateStatement 
 from FRESH_XPERIENCEDB.dbo.CMS_AlternativeForm FAF
 inner join FRESH_XPERIENCEDB.dbo.CMS_Class FClass on FClass.classID = FAF.FormClassID 
-inner join UPGRADED_XPERIENCEDB.dbo.CMS_Class UClass on FClass.ClassName = UClass.ClassName
-left join UPGRADED_XPERIENCEDB.dbo.CMS_AlternativeForm UAF on FAF.FormClassID = FClass.ClassID and FAF.FormName = UAF.FormName
+inner join UPGRADED_XPERIENCEDB.dbo.CMS_Class UClass on FClass.ClassName COLLATE SQL_Latin1_General_CP1_CI_AS = UClass.ClassName COLLATE SQL_Latin1_General_CP1_CI_AS
+left join UPGRADED_XPERIENCEDB.dbo.CMS_AlternativeForm UAF on FAF.FormClassID = FClass.ClassID and FAF.FormName COLLATE SQL_Latin1_General_CP1_CI_AS = UAF.FormName COLLATE SQL_Latin1_General_CP1_CI_AS
 where UAF.FormID is null
 
 ) combined order by MisMatchType desc, ClassName
+
 
 
 
