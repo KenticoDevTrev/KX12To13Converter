@@ -1,5 +1,5 @@
 -------------------------------------------------------------------------------
--------- POST UPGRADE Kentico Xperience 12 to Kentico Xperience 13  -----------
+-------- 3 POST UPGRADE Kentico Xperience 12 to Kentico Xperience 13  -----------
 -------- Function/Procedure Check                                  ------------
 -- Instances of Kentico Xperience that started before KX 12 may have an old  --
 -- Tables, Views, Index/Constraints/Functions, etc.  These should be updated,--
@@ -37,29 +37,29 @@
 -- Checks Views that are found in one but not the other
 -- Can remove un-needed procs/functions, and add missing ones
 SELECT 
-  ROUTINE_NAME, 'Remove From UPGRADED_XPERIENCEDB Custom' as Instructions
+  ROUTINE_NAME COLLATE SQL_Latin1_General_CP1_CI_AS as ROUTINE_NAME, 'Remove From UPGRADED_XPERIENCEDB Custom' COLLATE SQL_Latin1_General_CP1_CI_AS as Instructions
 FROM UPGRADED_XPERIENCEDB.INFORMATION_SCHEMA.ROUTINES
 EXCEPT
 SELECT 
-  ROUTINE_NAME, 'Remove From UPGRADED_XPERIENCEDB Custom' as Instructions
+  ROUTINE_NAME COLLATE SQL_Latin1_General_CP1_CI_AS as ROUTINE_NAME, 'Remove From UPGRADED_XPERIENCEDB Custom' COLLATE SQL_Latin1_General_CP1_CI_AS as Instructions
 FROM FRESH_XPERIENCEDB.INFORMATION_SCHEMA.ROUTINES
 
 SELECT 
-  ROUTINE_NAME, 'Add To UPGRADED_XPERIENCEDB' as Instructions
+  ROUTINE_NAME COLLATE SQL_Latin1_General_CP1_CI_AS as ROUTINE_NAME, 'Add To UPGRADED_XPERIENCEDB' COLLATE SQL_Latin1_General_CP1_CI_AS as Instructions
 FROM FRESH_XPERIENCEDB.INFORMATION_SCHEMA.ROUTINES
 EXCEPT
 SELECT 
-  ROUTINE_NAME, 'Add To UPGRADED_XPERIENCEDB' as Instructions
+  ROUTINE_NAME COLLATE SQL_Latin1_General_CP1_CI_AS as ROUTINE_NAME, 'Add To UPGRADED_XPERIENCEDB' COLLATE SQL_Latin1_General_CP1_CI_AS as Instructions
 FROM UPGRADED_XPERIENCEDB.INFORMATION_SCHEMA.ROUTINES
 
 
 -- Stored procs that differ in content
 select * from (
 SELECT 
-  ROUTINE_NAME, LTRIM(RTRIM(Replace(Replace(Replace(REPLACE(ROUTINE_DEFINITION, '[dbo].',''),'   ',' '),CHAR(13), ' '),char(10), ' '))) as ROUTINE_DEFINITION, 'Update' as Instructions
-FROM UPGRADED_XPERIENCEDB.INFORMATION_SCHEMA.ROUTINES where Routine_name in (Select Routine_name from FRESH_XPERIENCEDB.INFORMATION_SCHEMA.ROUTINES)
+  ROUTINE_NAME COLLATE SQL_Latin1_General_CP1_CI_AS as ROUTINE_NAME, LTRIM(RTRIM(Replace(Replace(Replace(REPLACE(ROUTINE_DEFINITION, '[dbo].',''),'   ',' '),CHAR(13), ' '),char(10), ' '))) COLLATE SQL_Latin1_General_CP1_CI_AS as ROUTINE_DEFINITION, 'Update' COLLATE SQL_Latin1_General_CP1_CI_AS as Instructions
+FROM UPGRADED_XPERIENCEDB.INFORMATION_SCHEMA.ROUTINES where Routine_name COLLATE SQL_Latin1_General_CP1_CI_AS in (Select Routine_name COLLATE SQL_Latin1_General_CP1_CI_AS from FRESH_XPERIENCEDB.INFORMATION_SCHEMA.ROUTINES)
 EXCEPT
 SELECT 
-  ROUTINE_NAME, LTRIM(RTRIM(Replace(Replace(Replace(REPLACE(ROUTINE_DEFINITION, '[dbo].',''),'   ',' '),CHAR(13), ' '),char(10), ' '))) as ROUTINE_DEFINITION, 'Update' as Instructions
+  ROUTINE_NAME COLLATE SQL_Latin1_General_CP1_CI_AS as ROUTINE_NAME, LTRIM(RTRIM(Replace(Replace(Replace(REPLACE(ROUTINE_DEFINITION, '[dbo].',''),'   ',' '),CHAR(13), ' '),char(10), ' '))) COLLATE SQL_Latin1_General_CP1_CI_AS as ROUTINE_DEFINITION, 'Update' COLLATE SQL_Latin1_General_CP1_CI_AS as Instructions
 FROM FRESH_XPERIENCEDB.INFORMATION_SCHEMA.ROUTINES
 ) combined order by Routine_Name
