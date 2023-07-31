@@ -147,8 +147,10 @@ namespace KX12To13Converter.Pages.CMSModules.KX12To13Converter.WidgetToPageBuild
 
         private bool HandlePreviewDocument(TreeNode document, PortalToMVCProcessDocumentPrimaryEventArgs results)
         {
-            tbxJsonResultTemplate.Text = (JsonConvert.SerializeObject(results.PageBuilderData.TemplateConfiguration, Formatting.Indented).Trim());
-            tbxJsonResultWidgets.Text = (JsonConvert.SerializeObject(results.PageBuilderData.ZoneConfiguration, Formatting.Indented).Trim());
+            var widgetAndTemplate = RunConversionMethods.GetWidgetTemplateJsonForPreview(results, document);
+           
+            tbxJsonResultTemplate.Text = widgetAndTemplate.Item1;
+            tbxJsonResultWidgets.Text = widgetAndTemplate.Item2;
             return true;
         }
 
