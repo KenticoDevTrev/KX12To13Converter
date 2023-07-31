@@ -1,5 +1,8 @@
 ﻿using CMS.DocumentEngine;
+using KX12To13Converter.Events;
 using KX12To13Converter.Interfaces;
+using KX12To13Converter.PortalEngineToPageBuilder.EventArgs;
+using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -89,5 +92,33 @@ namespace KX12To13Converter.Base.PageOperations
             }
         }
 
+        public Tuple<string, string> GetWidgetTemplateJsonForPreview(PortalToMVCProcessDocumentPrimaryEventArgs results, TreeNode document)
+        {
+            string widgetJson = JsonConvert.SerializeObject(results.PageBuilderData.ZoneConfiguration, Formatting.None);
+            string templateJson = !string.IsNullOrWhiteSpace(results.PageBuilderData.TemplateConfiguration.Identifier) ? JsonConvert.SerializeObject(results.PageBuilderData.TemplateConfiguration, Formatting.None) : string.Empty;
+
+            // Allow users to adjust the JSON data through this event.
+            var widgetJsonEventHandlerArgs = new ProcessesTemplateWidgetJsonEventArgs(templateJson, widgetJson, document, results);
+            using (var widgetJsonEventHandler = PortalToMVCEvents.ProcessTemplateWidgetJson.StartEvent(widgetJsonEventHandlerArgs))
+            {
+                widgetJsonEventHandler.FinishEvent();
+            }
+            widgetJson = widgetJsonEventHandlerArgs.WidgetConfigurationJson;
+            templateJson = widgetJsonEventHandlerArgs.PageTemplateJson;
+
+            // Prettify
+            if (!string.IsNullOrWhiteSpace(widgetJson))
+            {
+                dynamic parsedJsonWidget = JsonConvert.DeserializeObject(widgetJson);
+                widgetJson = JsonConvert.SerializeObject(parsedJsonWidget, Formatting.Indented);
+            }
+
+            if (!string.IsNullOrWhiteSpace(templateJson)) { 
+                dynamic parsedJsonTemplate = JsonConvert.DeserializeObject(templateJson);
+                templateJson = JsonConvert.SerializeObject(parsedJsonTemplate, Formatting.Indented);
+            }
+
+            return new Tuple<string, string>(widgetJson, templateJson);
+        }
     }
 }
