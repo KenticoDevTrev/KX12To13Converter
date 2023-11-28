@@ -101,6 +101,7 @@ Below are some nuances of the conversion processes:
 * EditableText and EditableImages in the page templates are treated as Webpart Zones and a default section and Text/Image widget is placed within it.
 * Since Inline Widgets do not exist in KX13, you can configure these to Ignore, Split, Wrap, or Add After (details on the Widget Configuration UI Step).  The Configurator has been updated to handle Split better, where it will detect inline widgets added at the END or BEGINNING of a rich text area and simply put them before / after the html content.  It will also, upon splitting, automatically resolve split end/start HTML tags to ensure the split out content is not broken HTML.  
 * You can parse multiple zones into a single Editable Area if you wish.  The configuration has been updated to honor the **editable area order** in the configuration when mapping to a single zone, so if you combine "TopZone", "MiddleZone", and "BottomZone" into a single editable area, just make sure that they are defined in the Widget Configuration in that order.
+* Ad-Hoc page templates will often appear as just a GUID for the name (that is actually the code name of the template), you may need to look in the database to see what Page Template that GUID matches and make adjustments accordingly.
 
 # GUIDE ON UPGRADING
 The [Wiki](https://github.com/KenticoDevTrev/KX12To13Converter/wiki) has an in depth guide to using this tool, and what to do during upgrade.  Please read this and follow along!
