@@ -95,6 +95,9 @@ Also for your convenience, I have included a BootstrapLayout 3 to 4 conversion h
 PortalToMVCEvents.ProcessSection.After += ProcessSection_After_BootstrapLayout.ProcessSectionAfter_Bootstrap;
 ```
 
+## Widget Configuration Help
+I've included a handful of KX13 .net core widgets that replace various Text/Image widgets commonly used in Portal Engine, and a guide for how to map the most common portal engine widgets to the Kentico and/or provided generic widgets.  [Please see the readme under KX13WidgetsForPortal](KX13WidgetsForPortal/readme.md)
+
 ## Nuances / Conversion Info
 Below are some nuances of the conversion processes:
 * Since Portal Engine allows for any number of nested widget zones, and Page Builder does not, only the parent layout widget will be parsed into a section around the widgets.  Any ancestor layouts are listed in the ProcessWidget's event arguments if you need further adjustments.

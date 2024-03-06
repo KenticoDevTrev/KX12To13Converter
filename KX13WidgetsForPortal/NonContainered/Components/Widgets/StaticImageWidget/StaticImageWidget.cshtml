@@ -1,0 +1,9 @@
+﻿@model ComponentViewModel<Generic.Components.Widgets.StaticImageWidget.StaticImageWidgetProperties>
+
+<img src="@Html.Raw(Model.Properties.Image)"
+     @Html.Raw(string.IsNullOrWhiteSpace(Model.Properties.ImageTitle) ? "" : "title=" + '"' + @Html.Raw(Model.Properties.ImageTitle) + '"')
+     @Html.Raw(string.IsNullOrWhiteSpace(Model.Properties.AlternativeText) ? "" : "alt=" + '"' + @Html.Raw(Model.Properties.AlternativeText) + '"')
+     @Html.Raw(Model.Properties.ImageWidth > 0 ? "width=" + '"' + @Html.Raw(Model.Properties.ImageWidth) + '"' : "")
+     @Html.Raw(Model.Properties.ImageHeight > 0 ? "height=" + '"' + @Html.Raw(Model.Properties.ImageHeight) + '"' : "")
+     @Html.Raw(string.IsNullOrWhiteSpace(Model.Properties.InlineStyle) ? "" : "style=" + '"' + @Html.Raw(Model.Properties.InlineStyle) + '"')
+     @Html.Raw(string.IsNullOrWhiteSpace(Model.Properties.ImageCssClass) ? "" : "class=" + '"' + @Html.Raw(Model.Properties.ImageCssClass) + '"') />

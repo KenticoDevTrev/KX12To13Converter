@@ -1,0 +1,6 @@
+﻿@model ComponentViewModel<Generic.Components.Widgets.StaticTextWithTagWidget.StaticTextWithTagWidgetProperties>
+<containered container-model="Model.Properties">
+    @Html.Raw(string.IsNullOrEmpty(Model.Properties.Tag) ? "" : "<" + @Html.Raw(Model.Properties.Tag) + ">")
+    @Html.Raw(Model.Properties.Text)
+    @Html.Raw(string.IsNullOrEmpty(Model.Properties.Tag) ? "" : "</" + @Html.Raw(Model.Properties.Tag) + ">")
+</containered>
